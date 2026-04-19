@@ -17,6 +17,7 @@
 import { chromium } from 'playwright';
 import { readFile } from 'fs/promises';
 import { classifyLiveness } from './liveness-core.mjs';
+import { openDb, initSchema, getPipelineEntryByUrl, updatePipelineEntry } from './lib/db.mjs';
 
 async function checkUrl(page, url) {
   try {
@@ -71,19 +72,28 @@ async function checkUrl(page, url) {
 
 async function main() {
   const args = process.argv.slice(2);
+  const updateDb = args.includes('--update-db');
+  const filteredArgs = args.filter(a => a !== '--update-db');
 
-  if (args.length === 0) {
+  if (filteredArgs.length === 0) {
     console.error('Usage: node check-liveness.mjs <url1> [url2] ...');
     console.error('       node check-liveness.mjs --file urls.txt');
+    console.error('       node check-liveness.mjs --update-db <url1> ...  # write result to DB pipeline_entries');
     process.exit(1);
   }
 
   let urls;
-  if (args[0] === '--file') {
-    const text = await readFile(args[1], 'utf-8');
+  if (filteredArgs[0] === '--file') {
+    const text = await readFile(filteredArgs[1], 'utf-8');
     urls = text.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
   } else {
-    urls = args;
+    urls = filteredArgs;
+  }
+
+  let db = null;
+  if (updateDb) {
+    db = openDb();
+    initSchema(db);
   }
 
   console.log(`Checking ${urls.length} URL(s)...\n`);
@@ -102,6 +112,14 @@ async function main() {
     if (result === 'active') active++;
     else if (result === 'expired') expired++;
     else uncertain++;
+
+    if (db) {
+      const entry = getPipelineEntryByUrl(db, url);
+      if (entry) {
+        const newState = result === 'active' ? 'active' : result === 'expired' ? 'expired' : 'uncertain';
+        updatePipelineEntry(db, entry.id, 'state', newState);
+      }
+    }
   }
 
   await browser.close();

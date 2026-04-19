@@ -17,7 +17,7 @@ There are two layers. Read `DATA_CONTRACT.md` for the full list.
 - `data/*`, `reports/*`, `output/*`, `interview-prep/*`
 
 **System Layer (auto-updatable, DON'T put user data here):**
-- `modes/_shared.md`, `modes/oferta.md`, all other modes
+- `modes/_shared.md`, `modes/evaluate.md`, all other modes
 - `CLAUDE.md`, `*.mjs` scripts, `dashboard/*`, `templates/*`, `batch/*`
 
 **THE RULE: When the user asks to customize anything (archetypes, narrative, negotiation scripts, proof points, location policy, comp targets), ALWAYS write to `modes/_profile.md` or `config/profile.yml`. NEVER edit `modes/_shared.md` for user-specific content.** This ensures system updates don't overwrite their customizations.
@@ -74,9 +74,9 @@ When using [OpenCode](https://opencode.ai), the following slash commands are ava
 |---------|------------------------|-------------|
 | `/career-ops` | `/career-ops` | Show menu or evaluate JD with args |
 | `/career-ops-pipeline` | `/career-ops pipeline` | Process pending URLs from inbox |
-| `/career-ops-evaluate` | `/career-ops oferta` | Evaluate job offer (A-F scoring) |
-| `/career-ops-compare` | `/career-ops ofertas` | Compare and rank multiple offers |
-| `/career-ops-contact` | `/career-ops contacto` | LinkedIn outreach (find contacts + draft) |
+| `/career-ops-evaluate` | `/career-ops evaluate` | Evaluate job offer (A-F scoring) |
+| `/career-ops-compare` | `/career-ops compare` | Compare and rank multiple offers |
+| `/career-ops-contact` | `/career-ops contact` | LinkedIn outreach (find contacts + draft) |
 | `/career-ops-deep` | `/career-ops deep` | Deep company research |
 | `/career-ops-pdf` | `/career-ops pdf` | Generate ATS-optimized CV |
 | `/career-ops-training` | `/career-ops training` | Evaluate course/cert against goals |
@@ -216,9 +216,9 @@ Default modes are in `modes/` (English). Additional language-specific modes are 
 | If the user... | Mode |
 |----------------|------|
 | Pastes JD or URL | auto-pipeline (evaluate + report + PDF + tracker) |
-| Asks to evaluate offer | `oferta` |
+| Asks to evaluate offer | `evaluate` |
 | Asks to compare offers | `ofertas` |
-| Wants LinkedIn outreach | `contacto` |
+| Wants LinkedIn outreach | `contact` |
 | Asks for company research | `deep` |
 | Preps for interview at specific company | `interview-prep` |
 | Wants to generate CV/PDF | `pdf` |
@@ -313,7 +313,7 @@ Write one TSV file per evaluation to `batch/tracker-additions/{num}-{company-slu
 
 1. **NEVER edit applications.md to ADD new entries** -- Write TSV in `batch/tracker-additions/` and `merge-tracker.mjs` handles the merge.
 2. **YES you can edit applications.md to UPDATE status/notes of existing entries.**
-3. All reports MUST include `**URL:**` in the header (between Score and PDF). Include `**Legitimacy:** {tier}` (see Block G in `modes/oferta.md`).
+3. All reports MUST include `**URL:**` in the header (between Score and PDF). Include `**Legitimacy:** {tier}` (see Block G in `modes/evaluate.md`).
 4. All statuses MUST be canonical (see `templates/states.yml`).
 5. Health check: `node verify-pipeline.mjs`
 6. Normalize statuses: `node normalize-statuses.mjs`
@@ -338,3 +338,10 @@ Write one TSV file per evaluation to `batch/tracker-additions/{num}-{company-slu
 - No markdown bold (`**`) in status field
 - No dates in status field (use the date column)
 - No extra text (use the notes column)
+
+## Active Technologies
+- Node.js v25 (ES modules, `.mjs`) + Go (dashboard TUI) + `better-sqlite3` (sync Node.js SQLite driver — new), (001-sqlite-storage)
+- SQLite3 — `data/career-ops.db` (user-layer, local file) (001-sqlite-storage)
+
+## Recent Changes
+- 001-sqlite-storage: Added Node.js v25 (ES modules, `.mjs`) + Go (dashboard TUI) + `better-sqlite3` (sync Node.js SQLite driver — new),

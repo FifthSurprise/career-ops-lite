@@ -97,7 +97,7 @@ Notes:
 If the candidate confirms they submitted the application:
 1. Update status in `applications.md` from "Evaluated" to "Applied"
 2. Update Section G of the report with final answers
-3. Suggest next step: `/career-ops contacto` for LinkedIn outreach
+3. Suggest next step: `/career-ops contact` for LinkedIn outreach
 
 ## Scroll handling
 

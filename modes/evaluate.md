@@ -112,9 +112,15 @@ Analyze the job posting for signals that indicate whether this is a real, active
 - Search: `"{company}" hiring freeze {year}` -- note any announcements
 - If layoffs found: are they in the same department as this role?
 
-**4. Reposting Detection** (from scan-history.tsv):
-- Check if company + similar role title appeared before with a different URL
-- Note how many times and over what period
+**4. Reposting Detection** (from scan_history in DB):
+
+Run `node db.mjs repost-check --company "{Company}" --role "{Role}" --json`. Output:
+
+```json
+{ "count": N, "first_seen": "YYYY-MM-DD", "last_seen": "YYYY-MM-DD", "urls": [...] }
+```
+
+Interpret: `count >= 2` within 90 days = concerning repost pattern. Do NOT read `data/scan-history.tsv` yourself.
 
 **5. Role Market Context** (qualitative, no additional queries):
 - Is this a common role that typically fills in 4-6 weeks?
@@ -150,8 +156,8 @@ Analyze the job posting for signals that indicate whether this is a real, active
 
 Save complete evaluation in `reports/{###}-{company-slug}-{YYYY-MM-DD}.md`.
 
-- `{###}` = next sequential number (3 digits, zero-padded)
-- `{company-slug}` = company name in lowercase, no spaces (use hyphens)
+- `{###}` = `node db.mjs next-num --json` (returns `{"next": N}`, pad to 3 digits)
+- `{company-slug}` = `node db.mjs slug "{Company Name}"` — do NOT kebab-case manually
 - `{YYYY-MM-DD}` = current date
 
 **Report format:**
@@ -214,3 +220,15 @@ Save complete evaluation in `reports/{###}-{company-slug}-{YYYY-MM-DD}.md`.
 ```markdown
 | # | Date | Company | Role | Score | Status | PDF | Report |
 ```
+
+### 3. Cache report summary (for downstream modes)
+
+After saving the report, persist a compact JSON summary to `llm_content` so `followup`, `interview-prep`, and `patterns` modes don't have to re-read the full report markdown later:
+
+```bash
+node db.mjs content set application {app_id} summary --body '{"archetype":"…","tldr":"…","remote":"…","comp":"…","score":4.2,"legitimacy":"High Confidence"}' --json
+```
+
+- `{app_id}` = the `id` returned from the insert (NOT the `num`)
+- Keep the body under 1 KB — it's a pointer to the full report, not a duplicate
+- Read it back with `node db.mjs content get application {app_id} summary --json` in other modes

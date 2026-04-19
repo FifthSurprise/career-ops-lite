@@ -5,7 +5,7 @@ When the user asks to prep for an interview at a specific company+role, or when 
 ## Inputs
 
 1. **Company name** and **role title** (required)
-2. **Evaluation report** in `reports/` (if exists) — read for archetype, gaps, matched proof points
+2. **Cached report summary** via `node db.mjs content get application {app_id} summary --json` — use this first for archetype/tldr/remote/comp. Fall back to reading the full `reports/` file only if no cached summary exists (or if Block B proof-point details are needed).
 3. **Story bank** at `interview-prep/story-bank.md` — read for existing prepared stories
 4. **CV** at `cv.md` + `article-digest.md` — read for proof points
 5. **Profile** at `config/profile.yml` + `modes/_profile.md` — read for candidate context

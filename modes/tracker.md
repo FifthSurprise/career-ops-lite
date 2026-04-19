@@ -1,23 +1,43 @@
 # Mode: tracker — Application Tracker
 
-Reads and displays `data/applications.md`.
+## Workflow
 
-**Tracker format:**
-```markdown
-| # | Date | Company | Role | Score | Status | PDF | Report |
+Run:
+
+```bash
+node db.mjs stats --json
 ```
 
-Possible statuses: `Evaluated` → `Applied` → `Responded` → `Contact` → `Interview` → `Offer` / `Rejected` / `Discarded` / `DO NOT APPLY`
+This returns all aggregate numbers without loading the tracker into context:
 
-- `Applied` = the candidate sent their application
-- `Responded` = A recruiter/company made contact and the candidate responded (inbound)
-- `Contact` = The candidate proactively reached out to someone at the company (outbound, e.g., LinkedIn power move)
+```json
+{
+  "applications": {
+    "total": N,
+    "by_status": { "Evaluated": N, "Applied": N, ... },
+    "avg_score": 4.12,
+    "with_pdf": N,
+    "with_pdf_pct": N,
+    "with_report": N,
+    "with_report_pct": N,
+    "next_num": N
+  },
+  "pipeline": { "total": N, "by_state": { ... } }
+}
+```
 
-If the user asks to update a status, edit the corresponding row.
+Display the numbers as a compact dashboard to the user. Only run `node db.mjs list applications --json` if the user asks for a specific row, filter, or range — never load the full list just to show totals.
 
-Also display statistics:
-- Total applications
-- By status
-- Average score
-- % with PDF generated
-- % with report generated
+## Updating status
+
+If the user asks to change a status (e.g. "mark #14 as Applied"), use:
+
+```bash
+node db.mjs update application <id> --field status --value Applied --json
+```
+
+Use the `id` (not `num`) — `list applications` returns both. Valid statuses: `Evaluated`, `Applied`, `Responded`, `Interview`, `Offer`, `Rejected`, `Discarded`, `SKIP`.
+
+- `Applied` — candidate sent application
+- `Responded` — recruiter reached out, candidate responded
+- `Interview` / `Offer` — downstream stages

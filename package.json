@@ -14,7 +14,11 @@
     "update": "node update-system.mjs apply",
     "rollback": "node update-system.mjs rollback",
     "liveness": "node check-liveness.mjs",
-    "scan": "node scan.mjs"
+    "scan": "node scan.mjs",
+    "db": "node db.mjs",
+    "migrate": "node migrate-to-db.mjs",
+    "db:export": "node db.mjs export",
+    "ui": "node ui/server.mjs"
   },
   "keywords": [
     "ai",
@@ -31,6 +35,7 @@
   },
   "license": "MIT",
   "dependencies": {
+    "better-sqlite3": "^11.10.0",
     "js-yaml": "^4.1.1",
     "playwright": "^1.58.1"
   }

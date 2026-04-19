@@ -1,0 +1,971 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>career-ops</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+      body {
+        background: #0f1117;
+        color: #e2e8f0;
+        font-family: "Inter", system-ui, sans-serif;
+      }
+      .score-high {
+        color: #34d399;
+      }
+      .score-mid {
+        color: #fbbf24;
+      }
+      .score-low {
+        color: #f87171;
+      }
+      .score-null {
+        color: #6b7280;
+      }
+      .status-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 9999px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .s-evaluated {
+        background: #1e3a5f;
+        color: #93c5fd;
+      }
+      .s-applied {
+        background: #1a3a2e;
+        color: #6ee7b7;
+      }
+      .s-interview {
+        background: #2d1f5e;
+        color: #c4b5fd;
+      }
+      .s-offer {
+        background: #3b2a00;
+        color: #fcd34d;
+      }
+      .s-rejected {
+        background: #3b1a1a;
+        color: #fca5a5;
+      }
+      .s-discarded {
+        background: #1f1f1f;
+        color: #9ca3af;
+      }
+      .s-skip {
+        background: #1c1c1c;
+        color: #6b7280;
+      }
+      .s-responded {
+        background: #1e3a2e;
+        color: #86efac;
+      }
+      .row-hover:hover {
+        background: #1e2330;
+        cursor: pointer;
+      }
+      #report-panel {
+        transition:
+          transform 0.2s ease,
+          opacity 0.2s ease;
+      }
+      #report-panel.hidden {
+        transform: translateX(100%);
+        opacity: 0;
+        pointer-events: none;
+      }
+      .markdown-body h1 {
+        font-size: 1.4em;
+        font-weight: 700;
+        margin: 1em 0 0.5em;
+        color: #f1f5f9;
+      }
+      .markdown-body h2 {
+        font-size: 1.15em;
+        font-weight: 600;
+        margin: 1.2em 0 0.4em;
+        color: #cbd5e1;
+        border-bottom: 1px solid #2d3748;
+        padding-bottom: 4px;
+      }
+      .markdown-body h3 {
+        font-size: 1em;
+        font-weight: 600;
+        margin: 1em 0 0.3em;
+        color: #94a3b8;
+      }
+      .markdown-body p {
+        margin: 0.5em 0;
+        line-height: 1.6;
+        color: #cbd5e1;
+        font-size: 13px;
+      }
+      .markdown-body ul,
+      .markdown-body ol {
+        margin: 0.5em 0 0.5em 1.2em;
+        color: #cbd5e1;
+        font-size: 13px;
+        line-height: 1.7;
+      }
+      .markdown-body li {
+        margin: 2px 0;
+      }
+      .markdown-body strong {
+        color: #f1f5f9;
+      }
+      .markdown-body code {
+        background: #1e2330;
+        padding: 1px 5px;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #7dd3fc;
+      }
+      .markdown-body hr {
+        border-color: #2d3748;
+        margin: 1em 0;
+      }
+      .markdown-body table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        margin: 0.8em 0;
+      }
+      .markdown-body th {
+        background: #1e2330;
+        color: #94a3b8;
+        padding: 6px 10px;
+        text-align: left;
+        border-bottom: 1px solid #2d3748;
+      }
+      .markdown-body td {
+        padding: 5px 10px;
+        border-bottom: 1px solid #1e2330;
+        color: #cbd5e1;
+      }
+      .markdown-body blockquote {
+        border-left: 3px solid #3b82f6;
+        padding-left: 12px;
+        color: #94a3b8;
+        font-style: italic;
+        margin: 0.8em 0;
+      }
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #1a1d27;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #374151;
+        border-radius: 3px;
+      }
+      th.sortable {
+        cursor: pointer;
+        user-select: none;
+      }
+      th.sortable:hover {
+        color: #93c5fd;
+      }
+      th.sort-asc::after {
+        content: " ↑";
+        color: #60a5fa;
+      }
+      th.sort-desc::after {
+        content: " ↓";
+        color: #60a5fa;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen flex flex-col">
+    <!-- Nav -->
+    <nav
+      class="border-b border-gray-800 px-6 py-3 flex items-center gap-6 sticky top-0 z-20"
+      style="background: #0f1117"
+    >
+      <span class="font-bold text-sm tracking-wider text-blue-400"
+        >career-ops</span
+      >
+      <div class="flex gap-1">
+        <button
+          onclick="showTab('stats')"
+          id="tab-stats"
+          class="tab-btn px-3 py-1.5 rounded text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800 transition"
+        >
+          Stats
+        </button>
+        <button
+          onclick="showTab('applications')"
+          id="tab-applications"
+          class="tab-btn px-3 py-1.5 rounded text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800 transition"
+        >
+          Applications
+        </button>
+        <button
+          onclick="showTab('pipeline')"
+          id="tab-pipeline"
+          class="tab-btn px-3 py-1.5 rounded text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800 transition"
+        >
+          Pipeline
+        </button>
+      </div>
+      <div class="ml-auto text-xs text-gray-600" id="last-refresh">–</div>
+    </nav>
+
+    <!-- Main layout -->
+    <div class="flex flex-1 overflow-hidden">
+      <!-- Content -->
+      <div class="flex-1 overflow-y-auto" id="main-content">
+        <!-- Stats tab -->
+        <div id="panel-stats" class="tab-panel p-6">
+          <div id="stats-content">Loading…</div>
+        </div>
+
+        <!-- Applications tab -->
+        <div id="panel-applications" class="tab-panel p-6 hidden">
+          <!-- Filters -->
+          <div class="flex flex-wrap gap-4 mb-6 items-center">
+            <!-- Status dropdown -->
+            <div class="relative" id="status-dropdown-container">
+              <button
+                id="status-dropdown-btn"
+                onclick="toggleStatusDropdown()"
+                class="bg-gray-900 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200 hover:border-gray-600 focus:outline-none focus:border-blue-500 transition"
+              >
+                Status
+              </button>
+              <div
+                id="status-dropdown-menu"
+                class="hidden absolute top-full left-0 mt-1 bg-gray-800 border border-gray-700 rounded shadow-lg z-10 min-w-48 p-2"
+              >
+                <div id="status-filters"></div>
+              </div>
+            </div>
+
+            <!-- Other filters -->
+            <input
+              id="filter-company"
+              oninput="debounceLoad()"
+              placeholder="Company…"
+              class="bg-gray-900 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-blue-500 w-40"
+            />
+            <input
+              id="filter-role"
+              oninput="debounceLoad()"
+              placeholder="Role…"
+              class="bg-gray-900 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-blue-500 w-40"
+            />
+            <input
+              id="filter-score-min"
+              oninput="debounceLoad()"
+              placeholder="Score ≥"
+              type="number"
+              step="0.1"
+              min="0"
+              max="5"
+              class="bg-gray-900 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-blue-500 w-24"
+            />
+            <button
+              onclick="clearFilters()"
+              class="px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 border border-gray-700 rounded hover:border-gray-500 transition"
+            >
+              Clear
+            </button>
+            <span id="app-count" class="ml-auto text-xs text-gray-500"></span>
+          </div>
+
+          <!-- Bulk actions bar (hidden until selection) -->
+          <div id="bulk-actions" class="hidden mb-4 p-3 bg-gray-800/50 border border-gray-700 rounded flex items-center gap-3">
+            <span id="selection-count" class="text-xs text-gray-400"></span>
+            <button
+              onclick="bulkUpdateStatus('SKIP')"
+              class="px-3 py-1.5 text-xs bg-red-900/30 text-red-300 border border-red-700/50 rounded hover:bg-red-900/50 transition"
+            >
+              Mark as SKIP
+            </button>
+            <button
+              onclick="bulkUpdateStatus('Applied')"
+              class="px-3 py-1.5 text-xs bg-green-900/30 text-green-300 border border-green-700/50 rounded hover:bg-green-900/50 transition"
+            >
+              Mark as Applied
+            </button>
+            <button
+              onclick="clearSelection()"
+              class="px-3 py-1.5 text-xs text-gray-400 border border-gray-600 rounded hover:bg-gray-700 transition ml-auto"
+            >
+              Clear selection
+            </button>
+          </div>
+
+          <!-- Table -->
+          <div class="overflow-x-auto rounded-lg border border-gray-800">
+            <table class="w-full text-sm">
+              <thead>
+                <tr
+                  class="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-gray-800"
+                  style="background: #13161f"
+                >
+                  <th class="px-3 py-3 w-8 text-center">
+                    <input type="checkbox" id="select-all" onchange="toggleSelectAll()" class="w-4 h-4 bg-gray-900 border border-gray-600 rounded cursor-pointer">
+                  </th>
+                  <th class="px-4 py-3 w-10">#</th>
+                  <th
+                    class="px-4 py-3 sortable"
+                    data-col="company"
+                    onclick="sortBy('company')"
+                  >
+                    Company
+                  </th>
+                  <th
+                    class="px-4 py-3 sortable"
+                    data-col="role"
+                    onclick="sortBy('role')"
+                  >
+                    Role
+                  </th>
+                  <th
+                    class="px-4 py-3 sortable w-20 text-center"
+                    data-col="score"
+                    onclick="sortBy('score')"
+                  >
+                    Score
+                  </th>
+                  <th class="px-4 py-3">Status</th>
+                  <th
+                    class="px-4 py-3 sortable w-28"
+                    data-col="date"
+                    onclick="sortBy('date')"
+                  >
+                    Date
+                  </th>
+                  <th class="px-4 py-3 w-10 text-center">PDF</th>
+                  <th class="px-4 py-3 w-14 text-center">Report</th>
+                </tr>
+              </thead>
+              <tbody id="apps-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Pipeline tab -->
+        <div id="panel-pipeline" class="tab-panel p-6 hidden">
+          <div class="flex gap-3 mb-4">
+            <select
+              id="filter-pipe-state"
+              onchange="loadPipeline()"
+              class="bg-gray-900 border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-blue-500"
+            >
+              <option value="">All states</option>
+              <option value="pending">Pending</option>
+              <option value="evaluated">Evaluated</option>
+              <option value="skipped">Skipped</option>
+            </select>
+            <span
+              id="pipe-count"
+              class="text-xs text-gray-500 self-center"
+            ></span>
+          </div>
+          <div class="overflow-x-auto rounded-lg border border-gray-800">
+            <table class="w-full text-sm">
+              <thead>
+                <tr
+                  class="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-gray-800"
+                  style="background: #13161f"
+                >
+                  <th class="px-4 py-3">URL</th>
+                  <th class="px-4 py-3 w-28">Company</th>
+                  <th class="px-4 py-3">Title</th>
+                  <th class="px-4 py-3 w-24">State</th>
+                  <th class="px-4 py-3 w-28">Discovered</th>
+                </tr>
+              </thead>
+              <tbody id="pipe-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <!-- /main-content -->
+
+      <!-- Report side panel -->
+      <div
+        id="report-panel"
+        class="hidden fixed right-0 top-0 h-full overflow-y-auto border-l border-gray-800 z-30 flex flex-col group"
+        style="
+          width: 560px;
+          background: #0d1017;
+          top: 48px;
+          height: calc(100vh - 48px);
+        "
+      >
+        <div
+          id="resize-handle"
+          class="absolute top-0 left-0 w-1 h-full bg-blue-500 opacity-0 group-hover:opacity-50 cursor-ew-resize hover:opacity-100 transition-opacity"
+        ></div>
+        <div
+          class="flex items-center justify-between px-5 py-3 border-b border-gray-800 sticky top-0"
+          style="background: #0d1017"
+        >
+          <span
+            id="report-title"
+            class="text-sm font-semibold text-gray-200 truncate max-w-xs"
+          ></span>
+          <button
+            onclick="closeReport()"
+            class="text-gray-500 hover:text-gray-200 text-lg leading-none ml-3"
+          >
+            ✕
+          </button>
+        </div>
+        <div
+          id="report-body"
+          class="markdown-body px-6 py-5 text-sm flex-1"
+        ></div>
+      </div>
+    </div>
+    <!-- /flex -->
+
+    <script>
+      // ── State ─────────────────────────────────────────────────────────────────────
+      let currentTab = "stats";
+      let allApps = [];
+      let sortCol = "score";
+      let sortDir = "desc";
+      let debounceTimer = null;
+      let selectedIds = new Set();
+
+      // ── Tab routing ───────────────────────────────────────────────────────────────
+      function showTab(name) {
+        currentTab = name;
+        clearSelection();
+        document
+          .querySelectorAll(".tab-panel")
+          .forEach((el) => el.classList.add("hidden"));
+        document.getElementById("panel-" + name).classList.remove("hidden");
+        document.querySelectorAll(".tab-btn").forEach((b) => {
+          b.classList.toggle("text-white", b.id === "tab-" + name);
+          b.classList.toggle("bg-gray-800", b.id === "tab-" + name);
+          b.classList.toggle("text-gray-400", b.id !== "tab-" + name);
+        });
+        if (name === "stats") loadStats();
+        if (name === "applications") {
+          loadStatuses();
+          loadApplications();
+        }
+        if (name === "pipeline") loadPipeline();
+      }
+
+      // ── API fetch ─────────────────────────────────────────────────────────────────
+      async function api(path) {
+        const res = await fetch(path);
+        if (!res.ok) throw new Error(await res.text());
+        return res.json();
+      }
+
+      // ── Stats ─────────────────────────────────────────────────────────────────────
+      async function loadStats() {
+        const el = document.getElementById("stats-content");
+        try {
+          const d = await api("/api/stats");
+
+          const scoreBar = (avg) =>
+            avg == null
+              ? ""
+              : `
+      <div class="mt-1 h-1.5 rounded bg-gray-800 w-full">
+        <div class="h-1.5 rounded" style="width:${((avg / 5) * 100).toFixed(1)}%; background:${avg >= 4 ? "#34d399" : avg >= 3 ? "#fbbf24" : "#f87171"}"></div>
+      </div>`;
+
+          const statusCards = d.byStatus
+            .map(
+              (s) => `
+      <div class="rounded-lg p-4 border border-gray-800" style="background:#13161f">
+        <div class="flex justify-between items-start">
+          <span class="status-badge s-${s.status.toLowerCase()}">${s.status}</span>
+          <span class="text-2xl font-bold text-gray-100">${s.count}</span>
+        </div>
+        ${s.avg_score != null ? `<div class="text-xs text-gray-500 mt-2">avg ${s.avg_score}/5${scoreBar(s.avg_score)}</div>` : ""}
+      </div>`,
+            )
+            .join("");
+
+          const pipeCards = d.pipeline
+            .map(
+              (p) => `
+      <div class="rounded-lg p-4 border border-gray-800 flex justify-between items-center" style="background:#13161f">
+        <span class="text-sm text-gray-400 capitalize">${p.state}</span>
+        <span class="text-xl font-bold text-gray-100">${p.count}</span>
+      </div>`,
+            )
+            .join("");
+
+          el.innerHTML = `
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="rounded-lg p-5 border border-blue-900/40" style="background:#13161f">
+          <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Total Apps</div>
+          <div class="text-3xl font-bold text-blue-400">${d.totals.total ?? 0}</div>
+        </div>
+        <div class="rounded-lg p-5 border border-green-900/40" style="background:#13161f">
+          <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Avg Score</div>
+          <div class="text-3xl font-bold text-green-400">${d.totals.avg_score ?? "–"}</div>
+        </div>
+        <div class="rounded-lg p-5 border border-purple-900/40" style="background:#13161f">
+          <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">PDFs Generated</div>
+          <div class="text-3xl font-bold text-purple-400">${d.totals.with_pdf ?? 0}</div>
+        </div>
+        <div class="rounded-lg p-5 border border-yellow-900/40" style="background:#13161f">
+          <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">Scanned URLs</div>
+          <div class="text-3xl font-bold text-yellow-400">${d.scanCount}</div>
+        </div>
+      </div>
+
+      <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3">By Status</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">${statusCards}</div>
+
+      <h2 class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3">Pipeline</h2>
+      <div class="grid grid-cols-3 gap-3">${pipeCards}</div>
+    `;
+        } catch (e) {
+          el.innerHTML = `<p class="text-red-400">Error: ${e.message}</p>`;
+        }
+      }
+
+      // ── Status filter ─────────────────────────────────────────────────────────────
+      async function loadStatuses() {
+        const container = document.getElementById("status-filters");
+        if (container.dataset.loaded) return;
+        const statuses = await api("/api/statuses");
+
+        const defaultStatuses = new Set(["Applied", "Evaluated"]);
+
+        statuses.forEach((s) => {
+          const checked = defaultStatuses.has(s);
+          const label = document.createElement("label");
+          label.className =
+            "flex items-center gap-2 cursor-pointer px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-700/50 rounded transition block";
+          label.innerHTML = `
+      <input type="checkbox" value="${s}" onchange="loadApplications()"
+             class="w-4 h-4 bg-gray-900 border border-gray-600 rounded cursor-pointer" ${checked ? "checked" : ""}>
+      <span>${s}</span>
+    `;
+          container.appendChild(label);
+        });
+        container.dataset.loaded = "1";
+      }
+
+      function toggleStatusDropdown() {
+        const menu = document.getElementById("status-dropdown-menu");
+        menu.classList.toggle("hidden");
+      }
+
+      // ── Applications ──────────────────────────────────────────────────────────────
+      async function loadApplications() {
+        // Get checked statuses
+        const checkedStatuses = Array.from(
+          document.querySelectorAll(
+            '#status-filters input[type="checkbox"]:checked',
+          ),
+        ).map((el) => el.value);
+
+        const company = document.getElementById("filter-company").value;
+        const role = document.getElementById("filter-role").value;
+        const scoreMin = document.getElementById("filter-score-min").value;
+
+        const qs = new URLSearchParams();
+        if (checkedStatuses.length > 0) {
+          checkedStatuses.forEach((s) => qs.append("statusIn", s));
+        }
+        if (company) qs.set("company", company);
+        if (role) qs.set("role", role);
+        if (scoreMin) qs.set("scoreMin", scoreMin);
+
+        try {
+          allApps = await api("/api/applications?" + qs);
+          renderApps();
+        } catch (e) {
+          document.getElementById("apps-tbody").innerHTML =
+            `<tr><td colspan="8" class="px-4 py-6 text-red-400 text-center">${e.message}</td></tr>`;
+        }
+      }
+
+      function debounceLoad() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(loadApplications, 300);
+      }
+
+      function clearFilters() {
+        const defaultStatuses = new Set(["Applied", "Evaluated"]);
+        document
+          .querySelectorAll('#status-filters input[type="checkbox"]')
+          .forEach((cb) => {
+            cb.checked = defaultStatuses.has(cb.value);
+          });
+        document.getElementById("filter-company").value = "";
+        document.getElementById("filter-role").value = "";
+        document.getElementById("filter-score-min").value = "";
+        clearSelection();
+        loadApplications();
+      }
+
+      function sortBy(col) {
+        if (sortCol === col) sortDir = sortDir === "asc" ? "desc" : "asc";
+        else {
+          sortCol = col;
+          sortDir = col === "score" ? "desc" : "asc";
+        }
+        document.querySelectorAll("th.sortable").forEach((th) => {
+          th.classList.remove("sort-asc", "sort-desc");
+          if (th.dataset.col === sortCol) th.classList.add("sort-" + sortDir);
+        });
+        renderApps();
+      }
+
+      function scoreClass(s) {
+        if (s == null) return "score-null";
+        if (s >= 4) return "score-high";
+        if (s >= 3) return "score-mid";
+        return "score-low";
+      }
+
+      function statusClass(s) {
+        return "s-" + (s ?? "").toLowerCase().replace(/\s+/g, "-");
+      }
+
+      function renderApps() {
+        const sorted = [...allApps].sort((a, b) => {
+          let av = a[sortCol],
+            bv = b[sortCol];
+          if (av == null) av = sortDir === "asc" ? Infinity : -Infinity;
+          if (bv == null) bv = sortDir === "asc" ? Infinity : -Infinity;
+          if (typeof av === "string")
+            return sortDir === "asc"
+              ? av.localeCompare(bv)
+              : bv.localeCompare(av);
+          return sortDir === "asc" ? av - bv : bv - av;
+        });
+
+        document.getElementById("app-count").textContent =
+          `${sorted.length} result${sorted.length !== 1 ? "s" : ""}`;
+
+        const rows = sorted
+          .map(
+            (a) => `
+    <tr class="row-hover border-b border-gray-800/60" data-app='${JSON.stringify(a).replace(/'/g, "&#39;")}'>
+      <td class="px-3 py-2.5 text-center" onclick="event.stopPropagation();">
+        <input type="checkbox" class="row-checkbox w-4 h-4 bg-gray-900 border border-gray-600 rounded cursor-pointer" data-id="${a.id}" onchange="updateSelection()">
+      </td>
+      <td class="px-4 py-2.5 text-gray-600 text-xs cursor-pointer" onclick="openReport(JSON.parse(this.parentElement.dataset.app))">${a.num}</td>
+      <td class="px-4 py-2.5 font-medium text-gray-200 cursor-pointer" onclick="openReport(JSON.parse(this.parentElement.dataset.app))">${esc(a.company)}</td>
+      <td class="px-4 py-2.5 text-gray-400 text-xs max-w-xs truncate cursor-pointer" onclick="openReport(JSON.parse(this.parentElement.dataset.app))">${esc(a.role)}</td>
+      <td class="px-4 py-2.5 text-center font-mono font-bold ${scoreClass(a.score)} cursor-pointer" onclick="openReport(JSON.parse(this.parentElement.dataset.app))">${a.score != null ? a.score.toFixed(1) : "–"}</td>
+      <td class="px-4 py-2.5"><span class="status-badge ${statusClass(a.status)} cursor-pointer hover:opacity-75" onclick="event.stopPropagation(); showStatusMenu(${a.id})">${esc(a.status)}</span></td>
+      <td class="px-4 py-2.5 text-gray-600 text-xs cursor-pointer" onclick="openReport(JSON.parse(this.parentElement.dataset.app))">${a.date}</td>
+      <td class="px-4 py-2.5 text-center text-sm cursor-pointer" onclick="openReport(JSON.parse(this.parentElement.dataset.app))">${a.pdf ? "✅" : '<span class="text-gray-700">—</span>'}</td>
+      <td class="px-4 py-2.5 text-center cursor-pointer" onclick="openReport(JSON.parse(this.parentElement.dataset.app))">${a.report_path ? '<span class="text-blue-500 text-xs">●</span>' : ''}</td>
+    </tr>`,
+          )
+          .join("");
+
+        document.getElementById("apps-tbody").innerHTML =
+          rows ||
+          `<tr><td colspan="9" class="px-4 py-8 text-center text-gray-600">No results</td></tr>`;
+
+        // Restore checkbox states
+        document.querySelectorAll('.row-checkbox').forEach(cb => {
+          cb.checked = selectedIds.has(parseInt(cb.dataset.id));
+        });
+
+        updateSelectAllCheckbox();
+      }
+
+      // ── Report panel ──────────────────────────────────────────────────────────────
+      async function openReport(app) {
+        const panel = document.getElementById("report-panel");
+        const body = document.getElementById("report-body");
+        const title = document.getElementById("report-title");
+
+        title.textContent = `${app.company} — ${app.role}`;
+        body.innerHTML = '<p class="text-gray-500">Loading…</p>';
+        panel.classList.remove("hidden");
+
+        if (!app.report_path) {
+          body.innerHTML = `
+      <div class="space-y-3 mt-2">
+        ${app.score != null ? `<p><span class="text-gray-500">Score:</span> <strong class="${scoreClass(app.score)}">${app.score.toFixed(1)}/5</strong></p>` : ""}
+        <p><span class="text-gray-500">Status:</span> <span class="status-badge ${statusClass(app.status)}">${app.status}</span></p>
+        <p><span class="text-gray-500">Date:</span> ${app.date}</p>
+        ${app.notes ? `<p class="text-gray-400 text-sm mt-3">${esc(app.notes)}</p>` : ""}
+        <p class="text-gray-600 text-xs mt-4 italic">No report file linked.</p>
+      </div>`;
+          return;
+        }
+
+        try {
+          const res = await fetch(
+            "/api/report?path=" + encodeURIComponent(app.report_path),
+          );
+          if (!res.ok) throw new Error("Report not found: " + app.report_path);
+          const md = await res.text();
+          body.innerHTML = marked.parse(md);
+        } catch (e) {
+          body.innerHTML = `<p class="text-red-400">${e.message}</p>`;
+        }
+      }
+
+      function closeReport() {
+        document.getElementById("report-panel").classList.add("hidden");
+      }
+
+      // ── Pipeline ──────────────────────────────────────────────────────────────────
+      async function loadPipeline() {
+        const state = document.getElementById("filter-pipe-state").value;
+        const qs = new URLSearchParams();
+        if (state) qs.set("state", state);
+
+        try {
+          const rows = await api("/api/pipeline?" + qs);
+          document.getElementById("pipe-count").textContent =
+            `${rows.length} entries`;
+
+          const html = rows
+            .map(
+              (p) => `
+      <tr class="border-b border-gray-800/60 hover:bg-gray-900/40">
+        <td class="px-4 py-2.5 text-xs text-blue-400 font-mono max-w-xs truncate">
+          <a href="${esc(p.url)}" target="_blank" class="hover:underline">${esc(p.url)}</a>
+        </td>
+        <td class="px-4 py-2.5 text-gray-300 text-sm">${esc(p.company ?? "–")}</td>
+        <td class="px-4 py-2.5 text-gray-400 text-xs">${esc(p.title ?? "–")}</td>
+        <td class="px-4 py-2.5"><span class="status-badge ${p.state === "pending" ? "s-evaluated" : "s-discarded"} cursor-pointer hover:opacity-75" onclick="event.stopPropagation(); showStateMenu(${p.id})">${p.state}</span></td>
+        <td class="px-4 py-2.5 text-gray-600 text-xs">${p.discovered_at}</td>
+      </tr>`,
+            )
+            .join("");
+
+          document.getElementById("pipe-tbody").innerHTML =
+            html ||
+            `<tr><td colspan="5" class="px-4 py-8 text-center text-gray-600">No entries</td></tr>`;
+        } catch (e) {
+          document.getElementById("pipe-tbody").innerHTML =
+            `<tr><td colspan="5" class="px-4 py-6 text-red-400">${e.message}</td></tr>`;
+        }
+      }
+
+      // ── Update handlers ──────────────────────────────────────────────────────────
+      async function updateApplicationStatus(appId, newStatus) {
+        try {
+          const res = await fetch(`/api/applications/${appId}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+          });
+          if (!res.ok) throw new Error(await res.text());
+          closeStatusMenu();
+          loadApplications();
+        } catch (e) {
+          alert('Error updating status: ' + e.message);
+        }
+      }
+
+      let activeStatusMenu = null;
+
+      function showStatusMenu(appId) {
+        closeStatusMenu();
+        const app = allApps.find(a => a.id === appId);
+        if (!app) return;
+
+        const menu = document.createElement('div');
+        menu.className = 'fixed bg-gray-800 border border-gray-700 rounded shadow-lg z-50 min-w-48 p-2';
+        menu.style.position = 'absolute';
+
+        const statuses = ['Applied', 'Evaluated', 'Interview', 'Offer', 'Rejected', 'Discarded', 'SKIP', 'Responded'];
+        const html = statuses.map(s => `
+          <div class="px-3 py-2 text-xs text-gray-300 hover:bg-gray-700 rounded cursor-pointer" onclick="updateApplicationStatus(${appId}, '${s}')">
+            ${s}
+          </div>
+        `).join('');
+
+        menu.innerHTML = html;
+        menu.id = 'status-menu-popup';
+        document.body.appendChild(menu);
+        activeStatusMenu = menu;
+
+        // Position near the clicked element
+        const evt = event;
+        menu.style.left = evt.pageX + 'px';
+        menu.style.top = evt.pageY + 'px';
+      }
+
+      function closeStatusMenu() {
+        if (activeStatusMenu) {
+          activeStatusMenu.remove();
+          activeStatusMenu = null;
+        }
+      }
+
+      let activeStateMenu = null;
+
+      function showStateMenu(entryId) {
+        if (activeStateMenu) activeStateMenu.remove();
+
+        const menu = document.createElement('div');
+        menu.className = 'fixed bg-gray-800 border border-gray-700 rounded shadow-lg z-50 min-w-40 p-2';
+        menu.style.position = 'absolute';
+
+        const states = ['pending', 'evaluated', 'skipped'];
+        const html = states.map(s => `
+          <div class="px-3 py-2 text-xs text-gray-300 hover:bg-gray-700 rounded cursor-pointer" onclick="updatePipelineState(${entryId}, '${s}')">
+            ${s}
+          </div>
+        `).join('');
+
+        menu.innerHTML = html;
+        document.body.appendChild(menu);
+        activeStateMenu = menu;
+
+        const evt = event;
+        menu.style.left = evt.pageX + 'px';
+        menu.style.top = evt.pageY + 'px';
+      }
+
+      async function updatePipelineState(entryId, newState) {
+        try {
+          const res = await fetch(`/api/pipeline/${entryId}/state`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ state: newState })
+          });
+          if (!res.ok) throw new Error(await res.text());
+          loadPipeline();
+        } catch (e) {
+          alert('Error updating state: ' + e.message);
+        }
+      }
+
+      // ── Multiselect ───────────────────────────────────────────────────────────────
+      function updateSelection() {
+        selectedIds.clear();
+        document.querySelectorAll('.row-checkbox:checked').forEach(cb => {
+          selectedIds.add(parseInt(cb.dataset.id));
+        });
+        updateBulkActionsBar();
+      }
+
+      function updateSelectAllCheckbox() {
+        const totalCheckboxes = document.querySelectorAll('.row-checkbox').length;
+        const checkedCheckboxes = document.querySelectorAll('.row-checkbox:checked').length;
+        const selectAllCb = document.getElementById('select-all');
+        selectAllCb.checked = totalCheckboxes > 0 && checkedCheckboxes === totalCheckboxes;
+        selectAllCb.indeterminate = checkedCheckboxes > 0 && checkedCheckboxes < totalCheckboxes;
+      }
+
+      function toggleSelectAll() {
+        const selectAllCb = document.getElementById('select-all');
+        document.querySelectorAll('.row-checkbox').forEach(cb => {
+          cb.checked = selectAllCb.checked;
+        });
+        updateSelection();
+      }
+
+      function updateBulkActionsBar() {
+        const count = selectedIds.size;
+        const bar = document.getElementById('bulk-actions');
+        if (count > 0) {
+          bar.classList.remove('hidden');
+          document.getElementById('selection-count').textContent = `${count} selected`;
+        } else {
+          bar.classList.add('hidden');
+        }
+      }
+
+      async function bulkUpdateStatus(newStatus) {
+        if (selectedIds.size === 0) return;
+        const ids = Array.from(selectedIds);
+        try {
+          for (const id of ids) {
+            await fetch(`/api/applications/${id}/status`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ status: newStatus })
+            });
+          }
+          selectedIds.clear();
+          updateBulkActionsBar();
+          loadApplications();
+        } catch (e) {
+          alert('Error updating statuses: ' + e.message);
+        }
+      }
+
+      function clearSelection() {
+        selectedIds.clear();
+        document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
+        document.getElementById('select-all').checked = false;
+        updateBulkActionsBar();
+      }
+
+      // ── Utils ─────────────────────────────────────────────────────────────────────
+      function esc(s) {
+        return String(s ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      // ── Resize handler ───────────────────────────────────────────────────────────
+      let isResizing = false;
+      let startX = 0;
+      let startWidth = 0;
+
+      document
+        .getElementById("resize-handle")
+        .addEventListener("mousedown", (e) => {
+          isResizing = true;
+          startX = e.clientX;
+          startWidth = document.getElementById("report-panel").offsetWidth;
+          e.preventDefault();
+        });
+
+      document.addEventListener("mousemove", (e) => {
+        if (!isResizing) return;
+        const deltaX = startX - e.clientX;
+        const newWidth = Math.max(300, startWidth + deltaX);
+        document.getElementById("report-panel").style.width = newWidth + "px";
+      });
+
+      document.addEventListener("mouseup", () => {
+        isResizing = false;
+      });
+
+      // ── Init ──────────────────────────────────────────────────────────────────────
+      document.getElementById("last-refresh").textContent =
+        new Date().toLocaleTimeString();
+      showTab("stats");
+
+      // Initial sort header
+      document
+        .querySelector(`th[data-col="${sortCol}"]`)
+        ?.classList.add("sort-" + sortDir);
+
+      // Close menus on outside click
+      document.addEventListener("click", (e) => {
+        const container = document.getElementById("status-dropdown-container");
+        if (!container?.contains(e.target)) {
+          document
+            .getElementById("status-dropdown-menu")
+            .classList.add("hidden");
+        }
+        closeStatusMenu();
+        if (activeStateMenu && !activeStateMenu.contains(e.target)) {
+          activeStateMenu.remove();
+          activeStateMenu = null;
+        }
+      });
+    </script>
+  </body>
+</html>

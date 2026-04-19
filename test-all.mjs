@@ -140,7 +140,7 @@ console.log('\n5. Data contract validation');
 const systemFiles = [
   'CLAUDE.md', 'VERSION', 'DATA_CONTRACT.md',
   'modes/_shared.md', 'modes/_profile.template.md',
-  'modes/oferta.md', 'modes/pdf.md', 'modes/scan.md',
+  'modes/evaluate.md', 'modes/pdf.md', 'modes/scan.md',
   'templates/states.yml', 'templates/cv-template.html',
   '.claude/skills/career-ops/SKILL.md',
 ];
@@ -240,8 +240,8 @@ if (!absPathResult) {
 console.log('\n8. Mode file integrity');
 
 const expectedModes = [
-  '_shared.md', '_profile.template.md', 'oferta.md', 'pdf.md', 'scan.md',
-  'batch.md', 'apply.md', 'auto-pipeline.md', 'contacto.md', 'deep.md',
+  '_shared.md', '_profile.template.md', 'evaluate.md', 'pdf.md', 'scan.md',
+  'batch.md', 'apply.md', 'auto-pipeline.md', 'contact.md', 'deep.md',
   'ofertas.md', 'pipeline.md', 'project.md', 'tracker.md', 'training.md',
 ];
 
@@ -293,6 +293,105 @@ if (fileExists('VERSION')) {
   }
 } else {
   fail('VERSION file missing');
+}
+
+// ── 11. SQLITE DB CHECKS ────────────────────────────────────────
+
+console.log('\n11. SQLite DB checks');
+
+// Variant of run() that returns stdout even when exit code is non-zero
+function runCapture(args) {
+  try {
+    return execFileSync('node', args, { cwd: ROOT, encoding: 'utf-8', timeout: 30000, stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+  } catch (e) {
+    return e.stdout?.trim() || null;
+  }
+}
+
+const TEST_DB = '/tmp/career-ops-test-suite.db';
+try {
+  // (a) init creates the DB
+  const initResult = run('node', ['db.mjs', 'init', '--db', TEST_DB, '--json']);
+  if (initResult && JSON.parse(initResult).status === 'ok') {
+    pass('db.mjs init exits 0 and creates DB');
+  } else {
+    fail('db.mjs init failed');
+  }
+
+  // (b) insert application → get by num
+  const insertResult = run('node', [
+    'db.mjs', 'insert', 'application',
+    '--db', TEST_DB,
+    '--data', JSON.stringify({ date: '2026-01-01', company: 'TestCo', role: 'Engineer', status: 'Evaluated' }),
+    '--json',
+  ]);
+  const inserted = insertResult ? JSON.parse(insertResult) : null;
+  if (inserted && inserted.status === 'ok' && inserted.num === 1) {
+    pass('insert application assigns num=1 for first row');
+  } else {
+    fail(`insert application failed: ${insertResult}`);
+  }
+
+  const getResult = run('node', ['db.mjs', 'get', 'application', '1', '--db', TEST_DB, '--json']);
+  const gotten = getResult ? JSON.parse(getResult) : null;
+  if (gotten && gotten.company === 'TestCo' && gotten.role === 'Engineer') {
+    pass('get application by num returns correct fields');
+  } else {
+    fail(`get application failed: ${getResult}`);
+  }
+
+  // (c) duplicate → DUPLICATE error
+  const dupResult = runCapture([
+    'db.mjs', 'insert', 'application',
+    '--db', TEST_DB,
+    '--data', JSON.stringify({ date: '2026-01-01', company: 'TestCo', role: 'Engineer', status: 'Evaluated' }),
+    '--json',
+  ]);
+  const dup = dupResult ? JSON.parse(dupResult) : null;
+  if (dup && dup.code === 'DUPLICATE') {
+    pass('duplicate insert returns DUPLICATE error code');
+  } else {
+    fail(`duplicate insert did not return DUPLICATE: ${dupResult}`);
+  }
+
+  // (d) invalid status → INVALID_STATUS
+  const badStatusResult = runCapture([
+    'db.mjs', 'insert', 'application',
+    '--db', TEST_DB,
+    '--data', JSON.stringify({ date: '2026-01-01', company: 'X', role: 'Y', status: 'NotAStatus' }),
+    '--json',
+  ]);
+  const badStatus = badStatusResult ? JSON.parse(badStatusResult) : null;
+  if (badStatus && badStatus.code === 'INVALID_STATUS') {
+    pass('invalid status returns INVALID_STATUS error code');
+  } else {
+    fail(`invalid status did not return INVALID_STATUS: ${badStatusResult}`);
+  }
+
+  // (e) list with --status filter
+  run('node', ['db.mjs', 'insert', 'application', '--db', TEST_DB, '--data', JSON.stringify({ date: '2026-01-02', company: 'Beta', role: 'PM', status: 'Applied' }), '--json']);
+  const listResult = run('node', ['db.mjs', 'list', 'applications', '--db', TEST_DB, '--status', 'Evaluated', '--json']);
+  const listed = listResult ? JSON.parse(listResult) : null;
+  if (Array.isArray(listed) && listed.length === 1 && listed[0].status === 'Evaluated') {
+    pass('list applications --status filter returns only matching rows');
+  } else {
+    fail(`list applications filter failed: ${listResult}`);
+  }
+
+  // (f) stats returns applications key
+  const statsResult = run('node', ['db.mjs', 'stats', '--db', TEST_DB, '--json']);
+  const stats = statsResult ? JSON.parse(statsResult) : null;
+  if (stats && stats.applications && typeof stats.applications.total === 'number') {
+    pass('db.mjs stats returns parseable JSON with applications key');
+  } else {
+    fail(`stats failed: ${statsResult}`);
+  }
+
+  // Cleanup
+  run('rm', ['-f', TEST_DB, TEST_DB + '-wal', TEST_DB + '-shm']);
+} catch (e) {
+  fail(`DB integration tests crashed: ${e.message}`);
+  run('rm', ['-f', TEST_DB, TEST_DB + '-wal', TEST_DB + '-shm']);
 }
 
 // ── SUMMARY ─────────────────────────────────────────────────────

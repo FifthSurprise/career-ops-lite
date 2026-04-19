@@ -17,10 +17,10 @@ If the input is a **URL** (not pasted JD text), follow this strategy to extract 
 **If input is JD text** (not URL): use directly, no fetch needed.
 
 ## Step 1 — Evaluation A-G
-Run exactly like `oferta` mode (read `modes/oferta.md` for all blocks A-F + Block G Posting Legitimacy).
+Run exactly like `oferta` mode (read `modes/evaluate.md` for all blocks A-F + Block G Posting Legitimacy).
 
 ## Step 2 — Save Report .md
-Save complete evaluation in `reports/{###}-{company-slug}-{YYYY-MM-DD}.md` (see format in `modes/oferta.md`).
+Save complete evaluation in `reports/{###}-{company-slug}-{YYYY-MM-DD}.md` (see format in `modes/evaluate.md`).
 Include Block G in the saved report. Add `**Legitimacy:** {tier}` to the report header.
 
 ## Step 3 — Generate PDF

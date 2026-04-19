@@ -52,9 +52,10 @@ Use visual indicators:
 
 For each **overdue** or **urgent** entry only:
 
-1. Read the linked report (`reportPath` from JSON) for company context
-2. Read `cv.md` for proof points
-3. Read `config/profile.yml` for candidate name and identity
+1. Try the cached summary first: `node db.mjs content get application {app_id} summary --json`. If present, use its `archetype`/`tldr`/`remote`/`comp` fields — no report read needed.
+2. Only if no cached summary exists, read the linked report (`reportPath` from JSON) for company context.
+3. Read `cv.md` for proof points
+4. Read `config/profile.yml` for candidate name and identity
 
 ### Email Follow-up Framework (first follow-up, followupCount == 0)
 
@@ -90,7 +91,7 @@ Generate a 3-4 sentence email:
 
 Reuse the contacto framework: 3 sentences, 300 character max.
 - Hook specific to company → proof point → soft ask
-- Suggest the user run `/career-ops contacto {company}` to find the right person first
+- Suggest the user run `/career-ops contact {company}` to find the right person first
 
 ### Second Follow-up (followupCount == 1)
 
@@ -104,7 +105,7 @@ Shorter than first (2-3 sentences). Take a **new angle**:
 Do NOT generate another follow-up. Instead suggest:
 > "This application has had {N} follow-ups with no response. Consider:
 > - Updating status to `Discarded` if the role seems filled
-> - Trying a different contact via `/career-ops contacto`
+> - Trying a different contact via `/career-ops contact`
 > - Keeping in `Applied` status but deprioritizing"
 
 ## Step 4 — Present Drafts
@@ -114,7 +115,7 @@ For each draft, show:
 ```
 ## Follow-up: {Company} — {Role} (#{num})
 
-**To:** {email or "No contact found — run `/career-ops contacto` first"}
+**To:** {email or "No contact found — run `/career-ops contact` first"}
 **Subject:** {subject line}
 **Days since application:** {N}
 **Follow-ups sent:** {N}

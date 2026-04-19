@@ -6,7 +6,7 @@ Processes offer URLs accumulated in `data/pipeline.md`. The user adds URLs whene
 
 1. **Read** `data/pipeline.md` → look for `- [ ]` items in the "Pending" section
 2. **For each pending URL**:
-   a. Calculate next sequential `REPORT_NUM` (read `reports/`, take the highest number + 1)
+   a. Get next sequential `REPORT_NUM` with `node db.mjs next-num --json` (returns `{"next": N}`)
    b. **Extract JD** using Playwright (browser_navigate + browser_snapshot) → WebFetch → WebSearch
    c. If the URL is not accessible → mark as `- [!]` with note and continue
    d. **Run complete auto-pipeline**: Evaluation A-F → Report .md → PDF (if score >= 3.0) → Tracker
@@ -44,9 +44,7 @@ Processes offer URLs accumulated in `data/pipeline.md`. The user adds URLs whene
 
 ## Automatic numbering
 
-1. List all files in `reports/`
-2. Extract the number from the prefix (e.g., `142-medispend...` → 142)
-3. New number = maximum found + 1
+Run `node db.mjs next-num --json` — it returns `{"next": N}` based on `MAX(num)+1` in the applications table. Do NOT list the `reports/` directory manually.
 
 ## Source synchronization
 

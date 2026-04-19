@@ -16,7 +16,7 @@
 10. Build competency grid from JD requirements (6-8 keyword phrases)
 11. Inject keywords naturally into existing achievements (NEVER invents)
 12. Generate complete HTML from template + personalized content
-13. Read `name` from `config/profile.yml` → normalize to kebab-case lowercase (e.g. "John Doe" → "john-doe") → `{candidate}`
+13. Get `{candidate}` slug: read `name` from `config/profile.yml`, then run `node db.mjs slug "{name}" --json` → returns `{"slug":"john-doe"}`. Do NOT kebab-case manually.
 14. Write HTML to `/tmp/cv-{candidate}-{company}.html`
 15. Execute: `node generate-pdf.mjs /tmp/cv-{candidate}-{company}.html output/cv-{candidate}-{company}-{YYYY-MM-DD}.pdf --format={letter|a4}`
 15. Report: PDF path, number of pages, % keyword coverage
