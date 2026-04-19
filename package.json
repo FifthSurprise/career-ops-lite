@@ -18,6 +18,8 @@
     "db": "node db.mjs",
     "migrate": "node migrate-to-db.mjs",
     "db:export": "node db.mjs export",
+    "db:push": "drizzle-kit push --config drizzle.config.mjs",
+    "db:studio": "drizzle-kit studio --config drizzle.config.mjs",
     "ui": "node ui/server.mjs"
   },
   "keywords": [
@@ -36,7 +38,11 @@
   "license": "MIT",
   "dependencies": {
     "better-sqlite3": "^11.10.0",
+    "drizzle-orm": "^0.45.2",
     "js-yaml": "^4.1.1",
     "playwright": "^1.58.1"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.10"
   }
 }

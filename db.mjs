@@ -2,8 +2,13 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { join, dirname } from 'path';
+import { count, avg, sum, max, sql } from 'drizzle-orm';
+import { applications, pipelineEntries } from './lib/drizzle.mjs';
+import yaml from 'js-yaml';
 import {
   openDb, initSchema,
+  listCvChunks, insertCvChunk, clearCvChunks,
+  getJdCache,
   getApplicationById, getApplicationByNum, listApplications,
   insertApplication, updateApplication, deleteApplication,
   getPipelineEntryById, getPipelineEntryByUrl, listPipeline,
@@ -94,35 +99,42 @@ function cmdInit(db, { flags }) {
 // ── Subcommand: stats ─────────────────────────────────────────────────────────
 
 function cmdStats(db, { flags }) {
-  const appRows = db.prepare('SELECT status, COUNT(*) AS cnt FROM applications GROUP BY status').all();
-  const appTotal = db.prepare('SELECT COUNT(*) AS cnt FROM applications').get().cnt;
+  const appRows = db.select({ status: applications.status, cnt: count() })
+    .from(applications).groupBy(applications.status).all();
+  const appTotalRow = db.select({ cnt: count() }).from(applications).get();
+  const appTotal = appTotalRow?.cnt ?? 0;
   const by_status = Object.fromEntries(appRows.map(r => [r.status, r.cnt]));
 
-  const agg = db.prepare(`
-    SELECT
-      AVG(score)                                    AS avg_score,
-      SUM(CASE WHEN pdf = 1 THEN 1 ELSE 0 END)      AS with_pdf,
-      SUM(CASE WHEN report_path IS NOT NULL AND report_path != '' THEN 1 ELSE 0 END) AS with_report,
-      MAX(num)                                      AS max_num
-    FROM applications
-  `).get();
-  const pctPdf    = appTotal ? Math.round(100 * (agg.with_pdf ?? 0) / appTotal) : 0;
-  const pctReport = appTotal ? Math.round(100 * (agg.with_report ?? 0) / appTotal) : 0;
+  const agg = db.select({
+    avg_score:   avg(applications.score),
+    with_pdf:    sum(applications.pdf),
+    with_report: sql`SUM(CASE WHEN ${applications.report_path} IS NOT NULL AND ${applications.report_path} != '' THEN 1 ELSE 0 END)`,
+    max_num:     max(applications.num),
+  }).from(applications).get();
+  const pctPdf    = appTotal ? Math.round(100 * (Number(agg?.with_pdf) || 0) / appTotal) : 0;
+  const pctReport = appTotal ? Math.round(100 * (Number(agg?.with_report) || 0) / appTotal) : 0;
 
-  const pipeRows = db.prepare('SELECT state, COUNT(*) AS cnt FROM pipeline_entries GROUP BY state').all();
-  const pipeTotal = db.prepare('SELECT COUNT(*) AS cnt FROM pipeline_entries').get().cnt;
+  const pipeRows = db.select({ state: pipelineEntries.state, cnt: count() })
+    .from(pipelineEntries).groupBy(pipelineEntries.state).all();
+  const pipeTotalRow = db.select({ cnt: count() }).from(pipelineEntries).get();
+  const pipeTotal = pipeTotalRow?.cnt ?? 0;
   const by_state = Object.fromEntries(pipeRows.map(r => [r.state, r.cnt]));
+
+  const avgScore = agg?.avg_score != null ? Number(Number(agg.avg_score).toFixed(2)) : null;
+  const withPdf    = Number(agg?.with_pdf) || 0;
+  const withReport = Number(agg?.with_report) || 0;
+  const maxNum     = Number(agg?.max_num) || 0;
 
   const data = {
     applications: {
       total: appTotal,
       by_status,
-      avg_score: agg.avg_score != null ? Number(agg.avg_score.toFixed(2)) : null,
-      with_pdf: agg.with_pdf ?? 0,
+      avg_score: avgScore,
+      with_pdf: withPdf,
       with_pdf_pct: pctPdf,
-      with_report: agg.with_report ?? 0,
+      with_report: withReport,
       with_report_pct: pctReport,
-      next_num: (agg.max_num ?? 0) + 1,
+      next_num: maxNum + 1,
     },
     pipeline: { total: pipeTotal, by_state },
   };
@@ -132,9 +144,9 @@ function cmdStats(db, { flags }) {
   } else {
     console.log(`Applications: ${appTotal}`);
     for (const [s, n] of Object.entries(by_status)) console.log(`  ${s}: ${n}`);
-    if (data.applications.avg_score != null) console.log(`  avg score: ${data.applications.avg_score}/5`);
-    console.log(`  with PDF: ${agg.with_pdf ?? 0} (${pctPdf}%)`);
-    console.log(`  with report: ${agg.with_report ?? 0} (${pctReport}%)`);
+    if (avgScore != null) console.log(`  avg score: ${avgScore}/5`);
+    console.log(`  with PDF: ${withPdf} (${pctPdf}%)`);
+    console.log(`  with report: ${withReport} (${pctReport}%)`);
     console.log(`  next num: ${data.applications.next_num}`);
     console.log(`Pipeline: ${pipeTotal}`);
     for (const [s, n] of Object.entries(by_state)) console.log(`  ${s}: ${n}`);
@@ -409,6 +421,120 @@ function cmdContentDelete(db, { flags, positional }) {
   if (!flags.json) console.log(deleted ? 'Deleted.' : 'Not found (nothing deleted).');
 }
 
+// ── Subcommand: cv sync / cv chunks ──────────────────────────────────────────
+
+const CV_STOP_WORDS = new Set([
+  'the','and','for','with','from','this','that','have','been','were','was','are',
+  'our','their','its','not','but','also','more','into','out','over','per','via',
+  'inc','llc','ltd','corp','has','had','will','can','may','its','who','which',
+  'all','each','any','both','many','most','some','such','only','own','same',
+  'than','too','very','just','after','before','between','during','without',
+]);
+
+function extractTags(header, text) {
+  const combined = `${header} ${text}`.toLowerCase();
+  const words = combined.match(/\b[a-z][a-z0-9+#.-]{2,}\b/g) ?? [];
+  const unique = [...new Set(words.filter(w => !CV_STOP_WORDS.has(w) && w.length >= 3))];
+  return unique.slice(0, 40).join(',');
+}
+
+function parseMdIntoChunks(content, source) {
+  const chunks = [];
+  const h2Sections = content.split(/\n(?=## )/);
+  for (const section of h2Sections) {
+    const h2Match = section.match(/^## (.+)/);
+    if (!h2Match) continue;
+    const sectionName = h2Match[1].trim();
+    const h3Parts = section.split(/\n(?=### )/);
+    const subsections = h3Parts.slice(1);
+    if (!subsections.length) {
+      const text = section.replace(/^## .+\n/, '').trim();
+      if (text) chunks.push({ section: sectionName, text, tags: extractTags(sectionName, text), source });
+    } else {
+      for (const sub of subsections) {
+        const h3Match = sub.match(/^### (.+)/);
+        const subName = h3Match ? h3Match[1].trim() : '';
+        const text = sub.replace(/^### .+\n/, '').trim();
+        if (text) chunks.push({ section: `${sectionName} — ${subName}`, text, tags: extractTags(`${sectionName} ${subName}`, text), source });
+      }
+    }
+  }
+  return chunks;
+}
+
+function cmdCvSync(db, { flags }) {
+  const dry = !!flags['dry-run'];
+  const sources = [];
+
+  for (const [file, source] of [['cv.md', 'cv'], ['article-digest.md', 'digest']]) {
+    const filePath = join(__dir, file);
+    if (!existsSync(filePath)) { sources.push({ source, skipped: true }); continue; }
+    const chunks = parseMdIntoChunks(readFileSync(filePath, 'utf-8'), source);
+    if (!dry) {
+      clearCvChunks(db, source);
+      for (const c of chunks) insertCvChunk(db, c);
+    }
+    sources.push({ source, chunks: chunks.length, skipped: false });
+  }
+
+  out(flags.json, { status: 'ok', dry, sources });
+  if (!flags.json) {
+    for (const s of sources) {
+      if (s.skipped) console.log(`  ${s.source}: file not found, skipped`);
+      else console.log(`  ${s.source}: ${s.chunks} chunk(s)${dry ? ' (dry run)' : ' synced'}`);
+    }
+  }
+}
+
+function cmdCvChunks(db, { flags }) {
+  const tags = flags.tags ? flags.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+  const limit = flags.limit ? parseInt(flags.limit) : 20;
+  const rows = listCvChunks(db, tags, limit);
+  out(flags.json, rows);
+  if (!flags.json) console.log(`${rows.length} chunk(s) found.`);
+}
+
+// ── Subcommand: context-pack ──────────────────────────────────────────────────
+
+function cmdContextPack(db, { flags }) {
+  const tags = flags.tags ? flags.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+  const url  = flags.url ?? null;
+  const limit = flags.limit ? parseInt(flags.limit) : 15;
+
+  // JD from cache
+  const jdRow = url ? getJdCache(db, url) : null;
+  const jd = jdRow ? { title: jdRow.title, company: jdRow.company, body_md: jdRow.body_md } : null;
+
+  // Compact profile slice
+  let profile = null;
+  const profilePath = join(__dir, 'config', 'profile.yml');
+  if (existsSync(profilePath)) {
+    const raw = yaml.load(readFileSync(profilePath, 'utf-8'));
+    profile = {
+      name:       raw.candidate?.full_name ?? raw.candidate?.name,
+      location:   raw.candidate?.location,
+      targets:    raw.target_roles ?? raw.targets,
+      archetypes: (raw.target_roles?.archetypes ?? raw.archetypes ?? []).map(a => ({
+        name: a.name, signals: a.signals ?? a.key_signals ?? a.emphasize,
+      })),
+      narrative: {
+        headline:    raw.narrative?.headline,
+        superpowers: raw.narrative?.superpowers,
+        exit_story:  raw.narrative?.exit_story,
+      },
+      compensation: raw.compensation,
+    };
+  }
+
+  // Relevant CV chunks
+  const chunks = listCvChunks(db, tags, limit);
+
+  out(flags.json, { jd, profile, cv_chunks: chunks, generated_at: new Date().toISOString() });
+  if (!flags.json) {
+    console.log(`Context pack: jd=${!!jd}, profile=${!!profile}, cv_chunks=${chunks.length}`);
+  }
+}
+
 // ── Subcommand: export (T048) ─────────────────────────────────────────────────
 
 function cmdExport(db, { flags }) {
@@ -485,6 +611,9 @@ Subcommands:
   content get  <owner-type> <owner-id> <tag>
   content set  <owner-type> <owner-id> <tag> --body <text>|--file <path>
   content delete <owner-type> <owner-id> <tag>
+  cv     sync [--dry-run]                    Parse cv.md + article-digest.md into cv_chunks table
+  cv     chunks --tags <kw1,kw2> [--limit N] Query relevant CV chunks by keyword tags
+  context-pack --tags <kw1,kw2> [--url <u>]  Compact context: jd + profile slice + relevant cv chunks
   export [--applications] [--pipeline]
   migrate [--dry-run] [--force]
 
@@ -584,6 +713,19 @@ switch (sub) {
     else errOut(globalFlags.json, 'UNKNOWN_ACTION', `Unknown content action "${action}". Use: list, get, set, delete`);
     break;
   }
+
+  case 'cv': {
+    const action = globalPos[1];
+    const r = { flags: globalFlags, positional: globalPos.slice(2) };
+    if (action === 'sync') cmdCvSync(db, r);
+    else if (action === 'chunks') cmdCvChunks(db, r);
+    else errOut(globalFlags.json, 'UNKNOWN_ACTION', `Unknown cv action "${action}". Use: sync, chunks`);
+    break;
+  }
+
+  case 'context-pack':
+    cmdContextPack(db, rest);
+    break;
 
   case 'export':
     cmdExport(db, rest);

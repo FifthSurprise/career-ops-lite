@@ -6,7 +6,7 @@ Analyze all tracked applications to find patterns in outcomes and surface action
 
 ## Inputs
 
-- `data/applications.md` — Application tracker
+- DB (`node db.mjs stats --json`) — Application counts by status
 - `reports/` — Individual evaluation reports
 - `config/profile.yml` — User profile (for recommendation context)
 - `modes/_profile.md` — User archetypes and framing
@@ -14,7 +14,11 @@ Analyze all tracked applications to find patterns in outcomes and surface action
 
 ## Minimum Threshold
 
-Before running analysis, check: does `data/applications.md` have at least 5 entries with status beyond "Evaluated" (i.e., Applied, Responded, Interview, Offer, Rejected, Discarded, SKIP)?
+Before running analysis, check the DB:
+```bash
+node db.mjs stats --json
+```
+Count entries with status beyond "Evaluated" from `.applications.by_status` (Applied, Responded, Interview, Offer, Rejected, Discarded, SKIP). Need at least 5.
 
 If not, tell the user:
 > "Not enough data yet -- {N}/5 applications have progressed beyond evaluation. Keep applying and come back when you have more outcomes to analyze."

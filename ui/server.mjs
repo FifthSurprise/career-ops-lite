@@ -8,6 +8,8 @@ import { createServer } from 'http';
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname, resolve, normalize } from 'path';
 import { fileURLToPath } from 'url';
+import { count, avg, sum, eq, asc, desc, isNotNull, sql } from 'drizzle-orm';
+import { applications, pipelineEntries, scanHistory } from '../lib/drizzle.mjs';
 import { openDb, initSchema, listApplications, listPipeline, updateApplication, updatePipelineEntry } from '../lib/db.mjs';
 
 const __dir = dirname(fileURLToPath(import.meta.url));
@@ -45,24 +47,27 @@ function parseQS(url) {
 // ── API handlers ──────────────────────────────────────────────────────────────
 
 function handleStats(res) {
-  const byStatus = db.prepare(`
-    SELECT status, COUNT(*) AS count, ROUND(AVG(score),2) AS avg_score
-    FROM applications GROUP BY status ORDER BY count DESC
-  `).all();
+  const byStatus = db.select({
+    status:    applications.status,
+    count:     count(),
+    avg_score: sql`ROUND(AVG(${applications.score}), 2)`,
+  }).from(applications).groupBy(applications.status).orderBy(desc(count())).all();
 
-  const totals = db.prepare(`
-    SELECT COUNT(*) AS total, ROUND(AVG(score),2) AS avg_score,
-           SUM(pdf) AS with_pdf, COUNT(report_path) AS with_report
-    FROM applications WHERE score IS NOT NULL
-  `).get();
+  const totals = db.select({
+    total:       count(),
+    avg_score:   sql`ROUND(AVG(${applications.score}), 2)`,
+    with_pdf:    sum(applications.pdf),
+    with_report: sql`COUNT(${applications.report_path})`,
+  }).from(applications).where(isNotNull(applications.score)).get();
 
-  const pipeline = db.prepare(`
-    SELECT state, COUNT(*) AS count FROM pipeline_entries GROUP BY state
-  `).all();
+  const pipeline = db.select({
+    state: pipelineEntries.state,
+    count: count(),
+  }).from(pipelineEntries).groupBy(pipelineEntries.state).all();
 
-  const scanCount = db.prepare('SELECT COUNT(*) AS count FROM scan_history').get();
+  const scanCountRow = db.select({ count: count() }).from(scanHistory).get();
 
-  json(res, { byStatus, totals, pipeline, scanCount: scanCount.count });
+  json(res, { byStatus, totals, pipeline, scanCount: scanCountRow?.count ?? 0 });
 }
 
 function handleApplications(res, params) {
@@ -84,7 +89,7 @@ function handleApplications(res, params) {
 }
 
 function handleApplication(res, id) {
-  const row = db.prepare('SELECT * FROM applications WHERE id = ?').get(parseInt(id));
+  const row = db.select().from(applications).where(eq(applications.id, parseInt(id))).get();
   if (!row) return notFound(res, `Application ${id} not found`);
   json(res, row);
 }
@@ -110,7 +115,8 @@ function handleReport(res, params) {
 }
 
 function handleStatuses(res) {
-  const rows = db.prepare('SELECT DISTINCT status FROM applications ORDER BY status').all();
+  const rows = db.selectDistinct({ status: applications.status })
+    .from(applications).orderBy(asc(applications.status)).all();
   json(res, rows.map(r => r.status));
 }
 

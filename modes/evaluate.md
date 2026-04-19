@@ -22,7 +22,13 @@ Table with:
 
 ## Block B — CV Match
 
-Read `cv.md`. Create table with each JD requirement mapped to exact lines from the CV.
+Extract 5-10 keywords from the JD (tech skills, role signals, domain terms). Query relevant CV chunks:
+
+```bash
+node db.mjs cv chunks --tags "{keyword1},{keyword2},..." --json
+```
+
+If cv_chunks table is empty (first run), fall back to reading `cv.md` directly and run `node db.mjs cv sync` afterward to populate it. Create table with each JD requirement mapped to exact lines from the returned chunks.
 
 **Adapted to archetype:**
 - If FDE → prioritize fast delivery and client-facing proof points

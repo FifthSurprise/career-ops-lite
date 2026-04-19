@@ -67,8 +67,11 @@ Levels are additive — all are run, results are merged and deduplicated.
 ## Workflow
 
 1. **Read configuration**: `portals.yml`
-2. **Read history**: `data/scan-history.tsv` → URLs already seen
-3. **Read dedup sources**: `data/applications.md` + `data/pipeline.md`
+2. **Check dedup via DB** — no file reads needed. For each candidate URL use:
+   ```bash
+   node db.mjs dedup --url {url} --company {company} --role {title} --json
+   ```
+   Returns `{"found": true/false, "source": "scan_history|pipeline|application"}`. Skip if `found: true`.
 
 4. **Level 1 — Playwright scan** (parallel in batches of 3-5):
    For each company in `tracked_companies` with `enabled: true` and defined `careers_url`:
@@ -107,10 +110,11 @@ Levels are additive — all are run, results are merged and deduplicated.
    - 0 keywords from `negative` must appear
    - `seniority_boost` keywords give priority but are not required
 
-7. **Deduplicate** against 3 sources:
-   - `scan-history.tsv` → exact URL already seen
-   - `applications.md` → normalized company + role already evaluated
-   - `pipeline.md` → exact URL already in pending or processed
+7. **Deduplicate** — single DB call per candidate:
+   ```bash
+   node db.mjs dedup --url {url} --company {company} --role {title} --json
+   ```
+   Checks `scan_history`, `pipeline_entries`, and `applications` tables. Skip if `found: true`.
 
 7.5. **Verify liveness of Level 3 WebSearch results** — BEFORE adding to pipeline:
 
@@ -118,21 +122,31 @@ Levels are additive — all are run, results are merged and deduplicated.
 
    For each new Level 3 URL (sequential — NEVER Playwright in parallel):
    a. `browser_navigate` to the URL
-   b. `browser_snapshot` to read the content
-   c. Classify:
+   b. Extract main content only (avoids nav/footer, ~10× smaller than full snapshot):
+      ```js
+      browser_evaluate: const m = document.querySelector('[role="main"], main, article, .job-description'); return (m ?? document.body)?.innerText ?? '';
+      ```
+   c. Check for visible apply control within main content:
+      ```js
+      browser_evaluate: const s = document.querySelector('[role="main"], main, article') ?? document.body; return Array.from(s.querySelectorAll('a,button,[role="button"]')).filter(e => e.getBoundingClientRect().width > 0).map(e => e.innerText || e.getAttribute('aria-label') || '').filter(Boolean).slice(0, 20);
+      ```
+   d. Classify:
       - **Active**: job title visible + role description + Apply/Submit control visible within main content. Don't count generic header/navbar/footer text.
       - **Expired** (any of these signals):
         - Final URL contains `?error=true` (Greenhouse redirects this way when the offer is closed)
         - Page contains: "job no longer available" / "no longer open" / "position has been filled" / "this job has expired" / "page not found"
         - Only navbar and footer visible, no JD content (content < ~300 chars)
-   d. If expired: record in `scan-history.tsv` with status `skipped_expired` and discard
-   e. If active: continue to step 8
+   e. If expired: record in `scan-history.tsv` with status `skipped_expired` and discard
+   f. If active: continue to step 8
 
    **Do not interrupt the entire scan if a URL fails.** If `browser_navigate` errors (timeout, 403, etc.), mark as `skipped_expired` and continue with the next.
 
 8. **For each verified new offer that passes filters**:
-   a. Add to `pipeline.md` "Pending" section: `- [ ] {url} | {company} | {title}`
-   b. Record in `scan-history.tsv`: `{url}\t{date}\t{query_name}\t{title}\t{company}\tadded`
+   a. Insert into DB pipeline:
+      ```bash
+      node db.mjs insert pipeline --url {url} --source {portal} --company {company} --title {title}
+      ```
+   b. Record in `data/scan-history.tsv`: `{url}\t{date}\t{query_name}\t{title}\t{company}\tadded`
 
 9. **Offers filtered by title**: record in `scan-history.tsv` with status `skipped_title`
 10. **Duplicate offers**: record with status `skipped_dup`

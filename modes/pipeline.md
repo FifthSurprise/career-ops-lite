@@ -33,7 +33,12 @@ Processes offer URLs accumulated in `data/pipeline.md`. The user adds URLs whene
 
 ## Intelligent JD detection from URL
 
-1. **Playwright (preferred):** `browser_navigate` + `browser_snapshot`. Works with all SPAs.
+1. **Playwright (preferred):** `browser_navigate` to load, then `browser_evaluate` to extract main content:
+   ```js
+   const main = document.querySelector('[role="main"], main, article, .job-description');
+   return (main ?? document.body)?.innerText ?? '';
+   ```
+   Scoping to `[role="main"]` avoids nav/footer boilerplate and reduces snapshot size ~10×. For SPAs that need an accessibility-tree view, use `browser_snapshot` instead.
 2. **WebFetch (fallback):** For static pages or when Playwright is not available.
 3. **WebSearch (last resort):** Search on secondary portals that index the JD.
 

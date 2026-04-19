@@ -29,38 +29,25 @@ async function checkUrl(page, url) {
     await page.waitForTimeout(2000);
 
     const finalUrl = page.url();
-    const bodyText = await page.evaluate(() => document.body?.innerText ?? '');
+
+    // Grab main content only — avoids nav/footer noise and reduces payload ~10×
+    const bodyText = await page.evaluate(() => {
+      const main = document.querySelector('[role="main"], main, article, #content, .job-description, .job-posting');
+      return (main ?? document.body)?.innerText ?? '';
+    });
+
+    // Scan for apply controls within main content only
     const applyControls = await page.evaluate(() => {
-      const candidates = Array.from(
-        document.querySelectorAll('a, button, input[type="submit"], input[type="button"], [role="button"]')
-      );
-
-      return candidates
-        .filter((element) => {
-          if (element.closest('nav, header, footer')) return false;
-          if (element.closest('[aria-hidden="true"]')) return false;
-
-          const style = window.getComputedStyle(element);
-          if (style.display === 'none' || style.visibility === 'hidden') return false;
-          if (!element.getClientRects().length) return false;
-
-          return Array.from(element.getClientRects()).some((rect) => rect.width > 0 && rect.height > 0);
+      const scope = document.querySelector('[role="main"], main, article, .job-description') ?? document.body;
+      return Array.from(scope.querySelectorAll('a, button, input[type="submit"], input[type="button"], [role="button"]'))
+        .filter((el) => {
+          const rect = el.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0 && !el.closest('[aria-hidden="true"]');
         })
-        .map((element) => {
-          const label = [
-            element.innerText,
-            element.value,
-            element.getAttribute('aria-label'),
-            element.getAttribute('title'),
-          ]
-            .filter(Boolean)
-            .join(' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-
-          return label;
-        })
-        .filter(Boolean);
+        .map((el) => [el.innerText, el.value, el.getAttribute('aria-label'), el.getAttribute('title')]
+          .filter(Boolean).join(' ').replace(/\s+/g, ' ').trim())
+        .filter(Boolean)
+        .slice(0, 20);
     });
 
     return classifyLiveness({ status, finalUrl, bodyText, applyControls });

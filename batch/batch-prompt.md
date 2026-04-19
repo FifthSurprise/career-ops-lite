@@ -10,20 +10,25 @@ Eres un worker de evaluación de ofertas de empleo for the candidate (read name 
 
 ---
 
-## Fuentes de Verdad (LEER antes de evaluar)
+## Fuentes de Verdad
 
-| Archivo | Ruta absoluta | Cuándo |
-|---------|---------------|--------|
-| cv.md | `cv.md (project root)` | SIEMPRE |
-| llms.txt | `llms.txt (if exists)` | SIEMPRE |
-| article-digest.md | `article-digest.md (project root)` | SIEMPRE (proof points) |
-| i18n.ts | `i18n.ts (if exists, optional)` | Solo entrevistas/deep |
-| cv-template.html | `templates/cv-template.html` | Para PDF |
-| generate-pdf.mjs | `generate-pdf.mjs` | Para PDF |
+Use the DB context-pack instead of reading cv.md + article-digest.md directly:
 
-**REGLA: NUNCA escribir en cv.md ni i18n.ts.** Son read-only.
-**REGLA: NUNCA hardcodear métricas.** Leerlas de cv.md + article-digest.md en el momento.
-**REGLA: Para métricas de artículos, article-digest.md prevalece sobre cv.md.** cv.md puede tener números más antiguos — es normal.
+```bash
+node db.mjs context-pack --tags "{jd_keyword1},{jd_keyword2},..." --url "{{URL}}" --json
+```
+
+Returns compact JSON: `{ jd, profile, cv_chunks }`. Use `cv_chunks` for proof points and `profile` for candidate identity. Falls back gracefully if jd_cache miss (`jd: null`).
+
+Additional files still needed:
+| Archivo | Ruta | Cuándo |
+|---------|------|--------|
+| cv-template.html | `templates/cv-template.html` | Para PDF (HTML template) |
+| generate-pdf.mjs | `generate-pdf.mjs` | Para PDF (script) |
+
+**REGLA: NUNCA escribir en cv.md ni archivos de portfolio.** Son read-only.
+**REGLA: NUNCA hardcodear métricas.** Leerlas de cv_chunks en el momento.
+**REGLA: Si cv_chunks está vacío**, cae a leer `cv.md` directamente y ejecuta `node db.mjs cv sync` afterward.
 
 ---
 
@@ -49,7 +54,11 @@ Eres un worker de evaluación de ofertas de empleo for the candidate (read name 
 
 ### Paso 2 — Evaluación A-G
 
-Read `cv.md`. Ejecuta TODOS los bloques:
+Extract 5-10 keywords from the JD, then fetch context:
+```bash
+node db.mjs context-pack --tags "{kw1},{kw2},..." --url "{{URL}}" --json
+```
+Use returned `cv_chunks` for proof points and `profile` for candidate identity. Ejecuta TODOS los bloques:
 
 #### Paso 0 — Detección de Arquetipo
 
@@ -93,7 +102,7 @@ Tabla con: Arquetipo detectado, Domain, Function, Seniority, Remote, Team size, 
 
 #### Bloque B — Match con CV
 
-Read `cv.md`. Tabla con cada requisito del JD mapeado a líneas exactas del CV o keys de i18n.ts.
+Usa `cv_chunks` del context-pack. Tabla con cada requisito del JD mapeado a chunks exactos del CV.
 
 **Adaptado al arquetipo:**
 - FDE → priorizar delivery rápida y client-facing
@@ -218,7 +227,7 @@ Donde `{company-slug}` es el nombre de empresa en lowercase, sin espacios, con g
 
 ### Paso 4 — Generar PDF
 
-1. Lee `cv.md` + `i18n.ts`
+1. Usa `cv_chunks` del context-pack (ya cargado en Paso 2); si necesitas el CV completo lee `cv.md`
 2. Extrae 15-20 keywords del JD
 3. Detecta idioma del JD → idioma del CV (EN default)
 4. Detecta ubicación empresa → formato papel: US/Canada → `letter`, resto → `a4`
@@ -369,7 +378,7 @@ Si algo falla:
 6. Usar corporate-speak
 
 ### SIEMPRE
-1. Leer cv.md, llms.txt y article-digest.md antes de evaluar
+1. Ejecutar `node db.mjs context-pack --tags {jd_keywords} --json` antes de evaluar (reemplaza leer cv.md + article-digest.md directamente)
 2. Detectar el arquetipo del rol y adaptar el framing
 3. Citar líneas exactas del CV cuando haga match
 4. Usar WebSearch para datos de comp y empresa
