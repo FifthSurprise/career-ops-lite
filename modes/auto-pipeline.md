@@ -8,8 +8,8 @@ If the input is a **URL** (not pasted JD text), follow this strategy to extract 
 
 **Priority order:**
 
-1. **Playwright (preferred):** Most job portals (Lever, Ashby, Greenhouse, Workday) are SPAs. Use `browser_navigate` + `browser_snapshot` to render and read the JD.
-2. **WebFetch (fallback):** For static pages (ZipRecruiter, WeLoveProduct, company career pages).
+1. **`jd-extract` skill (preferred):** Invoke the `jd-extract` skill as a subagent, passing the URL. It uses Playwright headless to render the page, find the JD body, and return clean Markdown. Works with all SPAs (Lever, Ashby, Greenhouse, Workday).
+2. **WebFetch (fallback):** If `jd-extract` returns an error, try WebFetch for static pages (ZipRecruiter, WeLoveProduct, company career pages).
 3. **WebSearch (last resort):** Search for role title + company on secondary portals that index the JD in static HTML.
 
 **If no method works:** Ask the candidate to paste the JD manually or share a screenshot.
