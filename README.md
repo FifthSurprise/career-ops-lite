@@ -32,6 +32,8 @@
   <img src="https://img.shields.io/badge/ZH--TW-blue?style=flat" alt="ZH-TW">
 </p>
 
+> **This is a fork.** See [README_LITE.md](README_LITE.md) for what's different.
+
 ---
 
 <p align="center">
