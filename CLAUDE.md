@@ -341,7 +341,7 @@ Write one TSV file per evaluation to `batch/tracker-additions/{num}-{company-slu
 
 ## Active Technologies
 - Node.js v25 (ES modules, `.mjs`) + Go (dashboard TUI) + `better-sqlite3` (sync Node.js SQLite driver — new), (001-sqlite-storage)
-- SQLite3 — `data/career-ops.db` (user-layer, local file) (001-sqlite-storage)
+- SQLite3 — `db/career-ops.db` (user-layer, local file) (001-sqlite-storage)
 
 ## Recent Changes
 - 001-sqlite-storage: Added Node.js v25 (ES modules, `.mjs`) + Go (dashboard TUI) + `better-sqlite3` (sync Node.js SQLite driver — new),

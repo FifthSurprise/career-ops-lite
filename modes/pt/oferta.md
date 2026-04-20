@@ -149,18 +149,10 @@ Salvar avaliacao completa em `reports/{###}-{company-slug}-{YYYY-MM-DD}.md`.
 
 ### 2. Registrar no tracker
 
-**SEMPRE** registrar em `data/applications.md`:
-- Proximo numero sequencial
-- Data atual
-- Empresa
-- Vaga
-- Score: media do match (1-5)
-- Status: `Evaluated`
-- PDF: ❌ (ou ✅ se a auto-pipeline gerou PDF)
-- Report: link relativo ao report .md (ex: `[001](reports/001-company-2026-01-01.md)`)
+**SEMPRE** registrar usando via `node db.mjs`:
 
-**Formato do tracker:**
-
-```markdown
-| # | Data | Empresa | Vaga | Score | Status | PDF | Report |
+```bash
+node db.mjs insert application --data '{"company":"{Empresa}", "role":"{Vaga}", "status":"Evaluated", "score":4.2, "pdf":false, "report_path":"reports/001-empresa-2026-01-01.md"}' --json
 ```
+
+Isso retornará `{"status":"ok","id":X,"num":Y}`. Anote o `id` retornado, você precisará dele para o próximo passo.

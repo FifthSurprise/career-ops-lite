@@ -111,7 +111,7 @@ After detecting archetype, read `modes/_profile.md` for the user's specific fram
 7. Be direct and actionable -- no fluff
 8. Native tech English for generated text. Short sentences, action verbs, no passive voice.
 8b. Case study URLs in PDF Professional Summary (recruiter may only read this).
-9. **Tracker additions as TSV** -- NEVER edit applications.md directly. Write TSV in `batch/tracker-additions/`.
+9. **Tracker additions via db.mjs** -- NEVER edit applications.md directly. Use `node db.mjs insert application --data '{"company":"...", "role":"...", "status":"Evaluated", ...}'`
 10. **Include `**URL:**` in every report header.**
 
 ### Tools
@@ -122,8 +122,8 @@ After detecting archetype, read `modes/_profile.md` for the user's specific fram
 | WebFetch | Fallback for extracting JDs from static pages |
 | Playwright | Verify offers (browser_navigate + browser_snapshot). **NEVER 2+ agents with Playwright in parallel.** |
 | Read | cv.md, _profile.md, article-digest.md, cv-template.html |
-| Write | Temporary HTML for PDF, applications.md, reports .md |
-| Edit | Update tracker |
+| Write | Temporary HTML for PDF, reports .md |
+| Edit | Update tracker using `node db.mjs` |
 | Canva MCP | Optional visual CV generation. Duplicate base design, edit text, export PDF. Requires `canva_resume_design_id` in profile.yml. |
 | Bash | `node generate-pdf.mjs` |
 

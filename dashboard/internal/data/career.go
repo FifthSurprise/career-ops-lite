@@ -24,9 +24,9 @@ var (
 	reArchetypeColon = regexp.MustCompile(`(?i)\*\*Arquetipo:\*\*\s*(.+)`)
 )
 
-// openDB opens the SQLite DB at {careerOpsPath}/data/career-ops.db.
+// openDB opens the SQLite DB at {careerOpsPath}/db/career-ops.db.
 func openDB(careerOpsPath string) (*sql.DB, error) {
-	dbPath := filepath.Join(careerOpsPath, "data", "career-ops.db")
+	dbPath := filepath.Join(careerOpsPath, "db", "career-ops.db")
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, err

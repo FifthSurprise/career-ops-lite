@@ -51,7 +51,8 @@ function parseArgs(argv) {
 
 // ── Output helpers ────────────────────────────────────────────────────────────
 
-function out(json, data) {
+function out(json, data, quiet = false) {
+  if (quiet) return;
   if (json) {
     process.stdout.write(JSON.stringify(data, null, 2) + '\n');
   } else if (typeof data === 'string') {
@@ -195,9 +196,15 @@ function cmdInsertApplication(db, { flags }) {
     errOut(flags.json, 'INVALID_JSON', '--data must be valid JSON');
   }
   try {
-    const { id, num } = insertApplication(db, data);
-    out(flags.json, { status: 'ok', id, num });
-    if (!flags.json) console.log(`Inserted application #${num} (id=${id})`);
+    if (Array.isArray(data)) {
+      const results = insertApplications(db, data);
+      out(flags.json, { status: 'ok', inserted: results.length, results }, flags.quiet);
+      if (!flags.json && !flags.quiet) console.log(`Inserted ${results.length} applications`);
+    } else {
+      const { id, num } = insertApplication(db, data);
+      out(flags.json, { status: 'ok', id, num }, flags.quiet);
+      if (!flags.json && !flags.quiet) console.log(`Inserted application #${num} (id=${id})`);
+    }
   } catch (e) {
     errOut(flags.json, e.code ?? 'DB_ERROR', e.message);
   }
@@ -228,8 +235,8 @@ function cmdUpdateApplication(db, { flags, positional }) {
   if (flags.value === undefined) errOut(flags.json, 'MISSING_ARG', '--value is required');
   try {
     updateApplication(db, id, flags.field, flags.value);
-    out(flags.json, { status: 'ok', id, field: flags.field, value: flags.value });
-    if (!flags.json) console.log(`Updated application ${id}: ${flags.field} = ${flags.value}`);
+    out(flags.json, { status: 'ok', id, field: flags.field, value: flags.value }, flags.quiet);
+    if (!flags.json && !flags.quiet) console.log(`Updated application ${id}: ${flags.field} = ${flags.value}`);
   } catch (e) {
     errOut(flags.json, e.code ?? 'DB_ERROR', e.message);
   }
@@ -251,20 +258,37 @@ function cmdDeleteApplication(db, { flags, positional }) {
 // ── Subcommand: insert pipeline ────────────────────────────────────────────────
 
 function cmdInsertPipeline(db, { flags }) {
-  if (!flags.url) errOut(flags.json, 'MISSING_ARG', '--url is required');
-  try {
-    const { id } = insertPipelineEntry(db, {
-      url: flags.url,
-      source: flags.source,
-      state: flags.state,
-      company: flags.company,
-      title: flags.title,
-    });
-    out(flags.json, { status: 'ok', id });
-    if (!flags.json) console.log(`Inserted pipeline entry id=${id}`);
-  } catch (e) {
-    const code = e.code === 'DUPLICATE' ? 'DUPLICATE_URL' : (e.code ?? 'DB_ERROR');
-    errOut(flags.json, code, e.message);
+  if (flags.data) {
+    // Bulk insertion via --data
+    let data;
+    try { data = JSON.parse(flags.data); } catch {
+      errOut(flags.json, 'INVALID_JSON', '--data must be valid JSON');
+    }
+    if (!Array.isArray(data)) errOut(flags.json, 'INVALID_JSON', '--data must be an array for bulk pipeline insert');
+    try {
+      const results = insertPipelineEntries(db, data);
+      out(flags.json, { status: 'ok', inserted: results.length, results }, flags.quiet);
+      if (!flags.json && !flags.quiet) console.log(`Inserted ${results.length} pipeline entries`);
+    } catch (e) {
+      errOut(flags.json, e.code ?? 'DB_ERROR', e.message);
+    }
+  } else {
+    // Single insertion via explicit flags
+    if (!flags.url) errOut(flags.json, 'MISSING_ARG', '--url is required. Or use --data for bulk json array.');
+    try {
+      const { id } = insertPipelineEntry(db, {
+        url: flags.url,
+        source: flags.source,
+        state: flags.state,
+        company: flags.company,
+        title: flags.title,
+      });
+      out(flags.json, { status: 'ok', id }, flags.quiet);
+      if (!flags.json && !flags.quiet) console.log(`Inserted pipeline entry id=${id}`);
+    } catch (e) {
+      const code = e.code === 'DUPLICATE' ? 'DUPLICATE_URL' : (e.code ?? 'DB_ERROR');
+      errOut(flags.json, code, e.message);
+    }
   }
 }
 
@@ -294,8 +318,8 @@ function cmdUpdatePipeline(db, { flags, positional }) {
 
   try {
     updatePipelineEntry(db, entry.id, flags.field, flags.value);
-    out(flags.json, { status: 'ok', id: entry.id, field: flags.field, value: flags.value });
-    if (!flags.json) console.log(`Updated pipeline entry ${entry.id}: ${flags.field} = ${flags.value}`);
+    out(flags.json, { status: 'ok', id: entry.id, field: flags.field, value: flags.value }, flags.quiet);
+    if (!flags.json && !flags.quiet) console.log(`Updated pipeline entry ${entry.id}: ${flags.field} = ${flags.value}`);
   } catch (e) {
     errOut(flags.json, e.code ?? 'DB_ERROR', e.message);
   }
@@ -619,7 +643,7 @@ Subcommands:
 
 Global options:
   --json        Machine-readable JSON output
-  --db <path>   Override DB path (default: data/career-ops.db)
+  --db <path>   Override DB path (default: db/career-ops.db)
 `.trim();
 
 const raw = process.argv.slice(2);

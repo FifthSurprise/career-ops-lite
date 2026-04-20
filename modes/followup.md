@@ -6,7 +6,7 @@ Track follow-up cadence for active applications. Flag overdue follow-ups, extrac
 
 ## Inputs
 
-- `data/applications.md` — Application tracker
+- `career-ops.db` (via `node db.mjs`) — Application tracker
 - `data/follow-ups.md` — Follow-up history (created on first use)
 - `reports/` — Evaluation reports (for context in drafts)
 - `config/profile.yml` — User profile (name, identity)
@@ -146,7 +146,7 @@ After the user reviews and says they've sent a follow-up, record it:
    - `Contact` = who it was sent to
    - `Notes` = brief note (e.g., "First follow-up, referenced Barbeiro.app")
 
-3. Optionally update the Notes column in `data/applications.md` with "Follow-up {N} sent {YYYY-MM-DD}"
+3. Optionally update the Notes column in the database via `node db.mjs update application <id> --field notes --value "Follow-up {N} sent {YYYY-MM-DD}" --quiet`
 
 **IMPORTANT:** Only record follow-ups the user confirms they actually sent. Never record a draft as sent.
 

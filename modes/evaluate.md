@@ -211,21 +211,13 @@ Save complete evaluation in `reports/{###}-{company-slug}-{YYYY-MM-DD}.md`.
 
 ### 2. Register in tracker
 
-**ALWAYS** register in `data/applications.md`:
-- Next sequential number
-- Current date
-- Company
-- Role
-- Score: match average (1-5)
-- Status: `Evaluated`
-- PDF: ❌ (or ✅ if auto-pipeline generated PDF)
-- Report: relative link to report .md (e.g., `[001](reports/001-company-2026-01-01.md)`)
+**ALWAYS** register the evaluation using `db.mjs`:
 
-**Tracker format:**
-
-```markdown
-| # | Date | Company | Role | Score | Status | PDF | Report |
+```bash
+node db.mjs insert application --data '{"company":"{Company}", "role":"{Role}", "status":"Evaluated", "score":4.2, "pdf":false, "report_path":"reports/001-company-2026-01-01.md"}' --json
 ```
+
+This will return `{"status":"ok","id":X,"num":Y}`. Note the `id` returned, you will need it for the next step.
 
 ### 3. Cache report summary (for downstream modes)
 

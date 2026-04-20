@@ -153,6 +153,41 @@ function handleUpdatePipelineState(res, id, body) {
   }
 }
 
+function handleAddPipelineUrls(res, body) {
+  try {
+    if (!body.urls) return json(res, { error: 'urls array required' }, 400);
+    if (!Array.isArray(body.urls)) return json(res, { error: 'urls must be array' }, 400);
+
+    const now = new Date().toISOString();
+    const added = [];
+    const skipped = [];
+
+    for (const entry of body.urls) {
+      if (!entry.url) continue;
+      try {
+        db.insert(pipelineEntries)
+          .values({
+            url: entry.url,
+            company: entry.company || null,
+            title: entry.role || entry.title || null,
+            source: entry.source || 'manual',
+            state: 'pending',
+            discovered_at: now,
+          })
+          .run();
+        added.push(entry.url);
+      } catch (e) {
+        // Likely duplicate URL
+        skipped.push(entry.url);
+      }
+    }
+
+    json(res, { success: true, added: added.length, skipped: skipped.length, urls: added });
+  } catch (err) {
+    json(res, { error: err.message }, 400);
+  }
+}
+
 // ── Static files ──────────────────────────────────────────────────────────────
 
 const MIME = {
@@ -198,6 +233,13 @@ const server = createServer((req, res) => {
     return readBody(req, (err, body) => {
       if (err) return json(res, { error: 'Invalid JSON' }, 400);
       handleUpdatePipelineState(res, pipelineStateMatch[1], body);
+    });
+  }
+
+  if (pathname === '/api/pipeline/add' && req.method === 'POST') {
+    return readBody(req, (err, body) => {
+      if (err) return json(res, { error: 'Invalid JSON' }, 400);
+      handleAddPipelineUrls(res, body);
     });
   }
 

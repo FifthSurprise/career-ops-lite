@@ -6,7 +6,7 @@
 ## Summary
 
 Replace `data/applications.md` and `data/pipeline.md` as the source of truth
-with a SQLite3 database at `data/career-ops.db`. Add a `db.mjs` CLI with named
+with a SQLite3 database at `db/career-ops.db`. Add a `db.mjs` CLI with named
 subcommands (`list`, `get`, `insert`, `update`, `delete`, `content`, `export`,
 `migrate`, `stats`) that returns JSON on stdout — the canonical interface for
 both the AI agent and all `.mjs` scripts. Migrate every script that currently
@@ -23,14 +23,14 @@ existing users.
 **Primary Dependencies**: `better-sqlite3` (sync Node.js SQLite driver — new),
   `modernc.org/sqlite` (pure-Go SQLite driver — new), `js-yaml` (existing),
   `playwright` (existing)
-**Storage**: SQLite3 — `data/career-ops.db` (user-layer, local file)
+**Storage**: SQLite3 — `db/career-ops.db` (user-layer, local file)
 **Testing**: `test-all.mjs` (existing custom runner, extended with DB tests)
 **Target Platform**: macOS / Linux local environment, no network dependency
 **Project Type**: CLI scripts (Node.js) + Go TUI dashboard
 **Performance Goals**: Single-row lookup and simple filter queries under 100 ms
   on a 10,000-row dataset; `db.mjs export` regenerates markdown snapshots in
   under 5 seconds
-**Constraints**: Local-first; no server process; `data/career-ops.db` is
+**Constraints**: Local-first; no server process; `db/career-ops.db` is
   User Layer (not overwritten by `update-system.mjs apply`)
 **Scale/Scope**: Hundreds to low-thousands of records; low write volume
   (dozens/minute peak in batch mode); concurrent batch workers require
@@ -42,7 +42,7 @@ existing users.
 
 | Principle | Relevance | Status |
 |-----------|-----------|--------|
-| **I. User Data Sovereignty** | `data/career-ops.db` is a new User Layer file. `DATA_CONTRACT.md` and `update-system.mjs` MUST be updated to protect it from system upgrades. | ✅ Pass — addressed in FR-014; update-system scope update planned |
+| **I. User Data Sovereignty** | `db/career-ops.db` is a new User Layer file. `DATA_CONTRACT.md` and `update-system.mjs` MUST be updated to protect it from system upgrades. | ✅ Pass — addressed in FR-014; update-system scope update planned |
 | **II. Ethical Use Over Volume** | Storage layer change does not affect application submission or scoring behaviour. | ✅ Pass — not in scope |
 | **III. Verified Offers Only** | `check-liveness.mjs` migration to DB does not change verification logic; liveness verdicts are now stored on the pipeline entry row. | ✅ Pass — no logic change, storage only |
 | **IV. Pipeline Integrity** | Major impact. TSV batch ingest path (`batch/tracker-additions/*.tsv` + `merge-tracker.mjs`) is replaced by direct DB writes. `verify-pipeline.mjs` now validates DB state. Canonical status enforcement moves from parse-time to DB write-time. | ✅ Pass — FR-003/019/020 cover migration; new integrity path equals or exceeds old |

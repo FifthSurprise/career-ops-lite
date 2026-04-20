@@ -280,7 +280,10 @@
           </div>
 
           <!-- Bulk actions bar (hidden until selection) -->
-          <div id="bulk-actions" class="hidden mb-4 p-3 bg-gray-800/50 border border-gray-700 rounded flex items-center gap-3">
+          <div
+            id="bulk-actions"
+            class="hidden mb-4 p-3 bg-gray-800/50 border border-gray-700 rounded flex items-center gap-3"
+          >
             <span id="selection-count" class="text-xs text-gray-400"></span>
             <button
               onclick="bulkUpdateStatus('SKIP')"
@@ -311,7 +314,12 @@
                   style="background: #13161f"
                 >
                   <th class="px-3 py-3 w-8 text-center">
-                    <input type="checkbox" id="select-all" onchange="toggleSelectAll()" class="w-4 h-4 bg-gray-900 border border-gray-600 rounded cursor-pointer">
+                    <input
+                      type="checkbox"
+                      id="select-all"
+                      onchange="toggleSelectAll()"
+                      class="w-4 h-4 bg-gray-900 border border-gray-600 rounded cursor-pointer"
+                    />
                   </th>
                   <th class="px-4 py-3 w-10">#</th>
                   <th
@@ -354,6 +362,33 @@
 
         <!-- Pipeline tab -->
         <div id="panel-pipeline" class="tab-panel p-6 hidden">
+          <!-- Bulk URL paste section -->
+          <div
+            class="mb-6 p-4 border border-gray-700 rounded-lg bg-gray-900/50"
+          >
+            <div class="text-sm font-semibold text-gray-300 mb-2">
+              Add URLs to Pipeline
+            </div>
+            <textarea
+              id="bulk-urls-input"
+              placeholder="Paste URLs (one per line) or JSON format"
+              class="w-full h-24 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-blue-500 font-mono"
+            ></textarea>
+            <div class="flex gap-2 mt-3">
+              <button
+                onclick="addBulkUrls()"
+                class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition"
+              >
+                Add URLs
+              </button>
+              <span
+                id="bulk-status"
+                class="text-xs text-gray-400 self-center"
+              ></span>
+            </div>
+          </div>
+
+          <!-- Filter section -->
           <div class="flex gap-3 mb-4">
             <select
               id="filter-pipe-state"
@@ -665,7 +700,7 @@
       <td class="px-4 py-2.5"><span class="status-badge ${statusClass(a.status)} cursor-pointer hover:opacity-75" onclick="event.stopPropagation(); showStatusMenu(${a.id})">${esc(a.status)}</span></td>
       <td class="px-4 py-2.5 text-gray-600 text-xs cursor-pointer" onclick="openReport(JSON.parse(this.parentElement.dataset.app))">${a.date}</td>
       <td class="px-4 py-2.5 text-center text-sm cursor-pointer" onclick="openReport(JSON.parse(this.parentElement.dataset.app))">${a.pdf ? "✅" : '<span class="text-gray-700">—</span>'}</td>
-      <td class="px-4 py-2.5 text-center cursor-pointer" onclick="openReport(JSON.parse(this.parentElement.dataset.app))">${a.report_path ? '<span class="text-blue-500 text-xs">●</span>' : ''}</td>
+      <td class="px-4 py-2.5 text-center cursor-pointer" onclick="openReport(JSON.parse(this.parentElement.dataset.app))">${a.report_path ? '<span class="text-blue-500 text-xs">●</span>' : ""}</td>
     </tr>`,
           )
           .join("");
@@ -675,7 +710,7 @@
           `<tr><td colspan="9" class="px-4 py-8 text-center text-gray-600">No results</td></tr>`;
 
         // Restore checkbox states
-        document.querySelectorAll('.row-checkbox').forEach(cb => {
+        document.querySelectorAll(".row-checkbox").forEach((cb) => {
           cb.checked = selectedIds.has(parseInt(cb.dataset.id));
         });
 
@@ -759,15 +794,15 @@
       async function updateApplicationStatus(appId, newStatus) {
         try {
           const res = await fetch(`/api/applications/${appId}/status`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: newStatus })
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: newStatus }),
           });
           if (!res.ok) throw new Error(await res.text());
           closeStatusMenu();
           loadApplications();
         } catch (e) {
-          alert('Error updating status: ' + e.message);
+          alert("Error updating status: " + e.message);
         }
       }
 
@@ -775,29 +810,43 @@
 
       function showStatusMenu(appId) {
         closeStatusMenu();
-        const app = allApps.find(a => a.id === appId);
+        const app = allApps.find((a) => a.id === appId);
         if (!app) return;
 
-        const menu = document.createElement('div');
-        menu.className = 'fixed bg-gray-800 border border-gray-700 rounded shadow-lg z-50 min-w-48 p-2';
-        menu.style.position = 'absolute';
+        const menu = document.createElement("div");
+        menu.className =
+          "fixed bg-gray-800 border border-gray-700 rounded shadow-lg z-50 min-w-48 p-2";
+        menu.style.position = "absolute";
 
-        const statuses = ['Applied', 'Evaluated', 'Interview', 'Offer', 'Rejected', 'Discarded', 'SKIP', 'Responded'];
-        const html = statuses.map(s => `
+        const statuses = [
+          "Applied",
+          "Evaluated",
+          "Interview",
+          "Offer",
+          "Rejected",
+          "Discarded",
+          "SKIP",
+          "Responded",
+        ];
+        const html = statuses
+          .map(
+            (s) => `
           <div class="px-3 py-2 text-xs text-gray-300 hover:bg-gray-700 rounded cursor-pointer" onclick="updateApplicationStatus(${appId}, '${s}')">
             ${s}
           </div>
-        `).join('');
+        `,
+          )
+          .join("");
 
         menu.innerHTML = html;
-        menu.id = 'status-menu-popup';
+        menu.id = "status-menu-popup";
         document.body.appendChild(menu);
         activeStatusMenu = menu;
 
         // Position near the clicked element
         const evt = event;
-        menu.style.left = evt.pageX + 'px';
-        menu.style.top = evt.pageY + 'px';
+        menu.style.left = evt.pageX + "px";
+        menu.style.top = evt.pageY + "px";
       }
 
       function closeStatusMenu() {
@@ -812,60 +861,127 @@
       function showStateMenu(entryId) {
         if (activeStateMenu) activeStateMenu.remove();
 
-        const menu = document.createElement('div');
-        menu.className = 'fixed bg-gray-800 border border-gray-700 rounded shadow-lg z-50 min-w-40 p-2';
-        menu.style.position = 'absolute';
+        const menu = document.createElement("div");
+        menu.className =
+          "fixed bg-gray-800 border border-gray-700 rounded shadow-lg z-50 min-w-40 p-2";
+        menu.style.position = "absolute";
 
-        const states = ['pending', 'evaluated', 'skipped'];
-        const html = states.map(s => `
+        const states = ["pending", "evaluated", "skipped"];
+        const html = states
+          .map(
+            (s) => `
           <div class="px-3 py-2 text-xs text-gray-300 hover:bg-gray-700 rounded cursor-pointer" onclick="updatePipelineState(${entryId}, '${s}')">
             ${s}
           </div>
-        `).join('');
+        `,
+          )
+          .join("");
 
         menu.innerHTML = html;
         document.body.appendChild(menu);
         activeStateMenu = menu;
 
         const evt = event;
-        menu.style.left = evt.pageX + 'px';
-        menu.style.top = evt.pageY + 'px';
+        menu.style.left = evt.pageX + "px";
+        menu.style.top = evt.pageY + "px";
       }
 
       async function updatePipelineState(entryId, newState) {
         try {
           const res = await fetch(`/api/pipeline/${entryId}/state`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ state: newState })
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ state: newState }),
           });
           if (!res.ok) throw new Error(await res.text());
           loadPipeline();
         } catch (e) {
-          alert('Error updating state: ' + e.message);
+          alert("Error updating state: " + e.message);
+        }
+      }
+
+      async function addBulkUrls() {
+        const input = document.getElementById("bulk-urls-input").value.trim();
+        const status = document.getElementById("bulk-status");
+
+        if (!input) {
+          status.textContent = "❌ No URLs provided";
+          return;
+        }
+
+        status.textContent = "⏳ Processing...";
+
+        try {
+          const urls = [];
+          const lines = input
+            .split("\n")
+            .map((l) => l.trim())
+            .filter((l) => l);
+
+          for (const line of lines) {
+            if (line.startsWith("{")) {
+              // JSON format
+              urls.push(JSON.parse(line));
+            } else if (line.startsWith("http")) {
+              // Raw URL
+              urls.push({ url: line });
+            }
+          }
+
+          if (urls.length === 0) {
+            status.textContent = "❌ No valid URLs found";
+            return;
+          }
+
+          const res = await fetch("/api/pipeline/add", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ urls }),
+          });
+
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error || "Failed to add URLs");
+          }
+
+          const result = await res.json();
+          status.textContent = `✅ Added ${result.added} URL(s)`;
+          document.getElementById("bulk-urls-input").value = "";
+
+          setTimeout(() => {
+            status.textContent = "";
+            loadPipeline();
+          }, 1500);
+        } catch (e) {
+          status.textContent = `❌ ${e.message}`;
         }
       }
 
       // ── Multiselect ───────────────────────────────────────────────────────────────
       function updateSelection() {
         selectedIds.clear();
-        document.querySelectorAll('.row-checkbox:checked').forEach(cb => {
+        document.querySelectorAll(".row-checkbox:checked").forEach((cb) => {
           selectedIds.add(parseInt(cb.dataset.id));
         });
         updateBulkActionsBar();
       }
 
       function updateSelectAllCheckbox() {
-        const totalCheckboxes = document.querySelectorAll('.row-checkbox').length;
-        const checkedCheckboxes = document.querySelectorAll('.row-checkbox:checked').length;
-        const selectAllCb = document.getElementById('select-all');
-        selectAllCb.checked = totalCheckboxes > 0 && checkedCheckboxes === totalCheckboxes;
-        selectAllCb.indeterminate = checkedCheckboxes > 0 && checkedCheckboxes < totalCheckboxes;
+        const totalCheckboxes =
+          document.querySelectorAll(".row-checkbox").length;
+        const checkedCheckboxes = document.querySelectorAll(
+          ".row-checkbox:checked",
+        ).length;
+        const selectAllCb = document.getElementById("select-all");
+        selectAllCb.checked =
+          totalCheckboxes > 0 && checkedCheckboxes === totalCheckboxes;
+        selectAllCb.indeterminate =
+          checkedCheckboxes > 0 && checkedCheckboxes < totalCheckboxes;
       }
 
       function toggleSelectAll() {
-        const selectAllCb = document.getElementById('select-all');
-        document.querySelectorAll('.row-checkbox').forEach(cb => {
+        const selectAllCb = document.getElementById("select-all");
+        document.querySelectorAll(".row-checkbox").forEach((cb) => {
           cb.checked = selectAllCb.checked;
         });
         updateSelection();
@@ -873,12 +989,13 @@
 
       function updateBulkActionsBar() {
         const count = selectedIds.size;
-        const bar = document.getElementById('bulk-actions');
+        const bar = document.getElementById("bulk-actions");
         if (count > 0) {
-          bar.classList.remove('hidden');
-          document.getElementById('selection-count').textContent = `${count} selected`;
+          bar.classList.remove("hidden");
+          document.getElementById("selection-count").textContent =
+            `${count} selected`;
         } else {
-          bar.classList.add('hidden');
+          bar.classList.add("hidden");
         }
       }
 
@@ -888,23 +1005,25 @@
         try {
           for (const id of ids) {
             await fetch(`/api/applications/${id}/status`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ status: newStatus })
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ status: newStatus }),
             });
           }
           selectedIds.clear();
           updateBulkActionsBar();
           loadApplications();
         } catch (e) {
-          alert('Error updating statuses: ' + e.message);
+          alert("Error updating statuses: " + e.message);
         }
       }
 
       function clearSelection() {
         selectedIds.clear();
-        document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
-        document.getElementById('select-all').checked = false;
+        document
+          .querySelectorAll(".row-checkbox")
+          .forEach((cb) => (cb.checked = false));
+        document.getElementById("select-all").checked = false;
         updateBulkActionsBar();
       }
 

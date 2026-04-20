@@ -5,7 +5,7 @@
 ## What changed
 
 `data/applications.md` and `data/pipeline.md` are no longer the source of
-truth. All job-search data now lives in `data/career-ops.db` (SQLite3). The
+truth. All job-search data now lives in `db/career-ops.db` (SQLite3). The
 markdown files are regenerated on demand by `db.mjs export` and should be
 treated as read-only.
 
@@ -17,7 +17,7 @@ treated as read-only.
 # Install new dependency
 npm install
 
-# Initialize the database (creates data/career-ops.db)
+# Initialize the database (creates db/career-ops.db)
 node db.mjs init
 ```
 
@@ -103,16 +103,16 @@ not edit the generated files — changes will be overwritten on the next export.
 
 ## Backup and git
 
-`data/career-ops.db` is user-layer data — treat it like `data/applications.md`
+`db/career-ops.db` is user-layer data — treat it like `data/applications.md`
 was. Options:
 
 - **Commit it**: convenient, but binary diffs are not human-readable. Suitable
-  for personal repos. Add `.gitattributes` entry: `data/career-ops.db binary`.
+  for personal repos. Add `.gitattributes` entry: `db/career-ops.db binary`.
 - **Gitignore it + backup separately**: add to `.gitignore` and rely on
   filesystem backup. Regenerate markdown snapshots before any commit for a
   human-readable history.
 
-Recommended: commit `data/career-ops.db` and also run `node db.mjs export`
+Recommended: commit `db/career-ops.db` and also run `node db.mjs export`
 before each commit so `data/applications.md` provides a readable diff.
 
 ---
@@ -122,7 +122,7 @@ before each commit so `data/applications.md` provides a readable diff.
 If something goes wrong, your original markdown files were not deleted during
 migration (only the DB was created). To revert to markdown:
 
-1. Delete `data/career-ops.db`
+1. Delete `db/career-ops.db`
 2. Roll back this branch (`git checkout main`)
 3. Your `data/applications.md` and `data/pipeline.md` are intact
 
@@ -130,7 +130,7 @@ migration (only the DB was created). To revert to markdown:
 
 ## Dashboard
 
-The Go dashboard reads from `data/career-ops.db` automatically after this
+The Go dashboard reads from `db/career-ops.db` automatically after this
 migration. Rebuild it once:
 
 ```bash

@@ -84,7 +84,7 @@ allows one writer and unlimited concurrent readers simultaneously. The tradeoff
 
 ## Decision 5: DB File Location and Name
 
-**Decision**: `data/career-ops.db`
+**Decision**: `db/career-ops.db`
 
 **Rationale**: The `data/` directory is already established as the User Layer
 data directory. Placing the DB there (a) keeps it alongside existing user files,

@@ -1,16 +1,16 @@
 # Modo: pipeline -- Inbox de URLs (Second Brain)
 
-Processa URLs de vagas acumuladas em `data/pipeline.md`. O candidato adiciona URLs quando quiser e depois executa `/career-ops pipeline` para processar todas de uma vez.
+Processa URLs de vagas acumuladas no banco de dados. O candidato adiciona URLs quando quiser e depois executa `/career-ops pipeline` para processar todas de uma vez.
 
 ## Workflow
 
-1. **Ler** `data/pipeline.md` → buscar itens `- [ ]` na secao "Pendentes"
+1. **Ler** pipeline usando `node db.mjs list pipeline --state pending --json`
 2. **Para cada URL pendente**:
    a. Calcular proximo `REPORT_NUM` sequencial (ler `reports/`, pegar o numero mais alto + 1)
    b. **Extrair JD** usando Playwright (browser_navigate + browser_snapshot) → WebFetch → WebSearch
    c. Se a URL nao for acessivel → marcar como `- [!]` com nota e continuar
-   d. **Executar auto-pipeline completa**: Avaliacao A-F → Report .md → PDF (se score >= 3.0) → Tracker
-   e. **Mover de "Pendentes" para "Processadas"**: `- [x] #NNN | URL | Empresa | Vaga | Score/5 | PDF ✅/❌`
+   d. **Rodar auto-pipeline completo**: Avaliacao A-F → Report .md → PDF (se score >= 3.0) → Tracker (via `node db.mjs insert application`)
+   e. **Atualizar status no pipeline**: `node db.mjs update pipeline <id> --field state --value evaluated`
 3. **Se houver 3+ URLs pendentes**, lancar agentes em paralelo (Agent tool com `run_in_background`) para maximizar velocidade.
 4. **Ao terminar**, mostrar tabela resumo:
 

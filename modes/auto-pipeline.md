@@ -63,6 +63,6 @@ If the final score is >= 4.5, generate draft answers for the application form:
 **Language**: Always in the JD's language (EN default). Apply `/tech-translate`.
 
 ## Step 5 — Update Tracker
-Register in `data/applications.md` with all columns including Report and PDF as ✅.
+Register the application using `node db.mjs insert application --data '{"company":"...", "role":"...", "status":"Evaluated", ...}' --quiet`.
 
-**If any step fails**, continue with the remaining steps and mark the failed step as pending in the tracker.
+**If any step fails**, continue with the remaining steps and update the application record via `node db.mjs update application <id> --field status --value <status> --quiet`.

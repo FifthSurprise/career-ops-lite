@@ -5,7 +5,7 @@
 ## Overview
 
 `db.mjs` is the canonical interface between all scripts, the AI agent, and the
-SQLite database. Every read and write to `data/career-ops.db` goes through
+SQLite database. Every read and write to `db/career-ops.db` goes through
 this script. No script (including the agent) may open the DB file directly.
 
 All subcommands accept `--json` for machine-readable output. Without `--json`,
@@ -18,7 +18,7 @@ output is human-readable (table or summary). Exit code `0` = success,
 
 ```
 --json        Output JSON instead of human-readable text
---db <path>   Override DB path (default: data/career-ops.db)
+--db <path>   Override DB path (default: db/career-ops.db)
 --dry-run     Print what would happen without writing
 ```
 

@@ -25,7 +25,7 @@ description: "Task list for SQLite Storage for Pipeline and Applications"
 - [ ] T001 Add `better-sqlite3` to `package.json` dependencies and run `npm install` to confirm it builds (binaries pre-built for macOS/Linux)
 - [ ] T002 [P] Add `modernc.org/sqlite` to `dashboard/go.mod` via `go get modernc.org/sqlite` from `dashboard/` directory
 - [ ] T003 [P] Create `lib/` directory at repo root (holds shared `lib/db.mjs` module)
-- [ ] T004 [P] Update `DATA_CONTRACT.md` — add `data/career-ops.db` explicitly to the User Layer list alongside `data/*`
+- [ ] T004 [P] Update `DATA_CONTRACT.md` — add `db/career-ops.db` explicitly to the User Layer list alongside `data/*`
 
 ---
 
@@ -33,7 +33,7 @@ description: "Task list for SQLite Storage for Pipeline and Applications"
 
 **Purpose**: `lib/db.mjs` shared module — everything else imports from here. MUST be complete before any user story phase.
 
-- [ ] T005 Create `lib/db.mjs` — export `openDb()` function that opens `data/career-ops.db`, sets `PRAGMA journal_mode=WAL`, `PRAGMA foreign_keys=ON`, and `PRAGMA busy_timeout=5000`; returns the `better-sqlite3` Database instance
+- [ ] T005 Create `lib/db.mjs` — export `openDb()` function that opens `db/career-ops.db`, sets `PRAGMA journal_mode=WAL`, `PRAGMA foreign_keys=ON`, and `PRAGMA busy_timeout=5000`; returns the `better-sqlite3` Database instance
 - [ ] T006 Add `initSchema(db)` to `lib/db.mjs` — run `CREATE TABLE IF NOT EXISTS` for all four tables: `applications` (id, num, date, company, role, cycle_id, status, score, pdf, report_path, url, legitimacy, notes; UNIQUE on company+role+cycle_id), `pipeline_entries` (id, url UNIQUE, source, state, title, company, local_jd, discovered_at, application_id), `llm_content` (id, owner_type, owner_id, tag, body, created_at; UNIQUE on owner_type+owner_id+tag), `scan_history` (url PRIMARY KEY, first_seen, portal, title, company, status); create all indexes from `data-model.md`
 - [ ] T007 Add `loadCanonicalStatuses()` to `lib/db.mjs` — read `templates/states.yml` with `js-yaml`, extract all canonical `label` values (case-insensitive); export `validateStatus(s)` that throws a clear error if the value is not in the list
 - [ ] T008 [P] Add application read helpers to `lib/db.mjs` — `getApplicationById(db, id)`, `getApplicationByNum(db, num)`, `listApplications(db, filters)` where filters accepts `{status, statusIn, company, role, scoreMin, scoreMax, days, cycleId, limit, offset}`; all return plain JS objects
@@ -91,7 +91,7 @@ description: "Task list for SQLite Storage for Pipeline and Applications"
 - [ ] T031 [US3] [P] Migrate `analyze-patterns.mjs` — replace `readFileSync(APPS_FILE)` + markdown table parse with `listApplications(db, {})` from `lib/db.mjs`; all pattern analysis logic unchanged; JSON stdout output unchanged
 - [ ] T032 [US3] [P] Migrate `followup-cadence.mjs` — replace `readFileSync(APPS_FILE)` + markdown parse with `listApplications(db, {statusIn: ['Applied','Responded','Interview']})` from `lib/db.mjs`; cadence logic unchanged; JSON/summary stdout unchanged; `data/follow-ups.md` remains markdown (out of scope)
 - [ ] T033 [US3] [P] Migrate `check-liveness.mjs` — no structural change to Playwright logic; add `--update-db` flag: when set, after checking each URL call `updatePipelineEntry(db, url, 'state', result)` from `lib/db.mjs` to write `expired`/`active`/`uncertain` back to `pipeline_entries`
-- [ ] T034 [US3] Migrate Go dashboard `dashboard/internal/data/career.go` — replace `ParseApplications()` (markdown regex) with a SQLite query via `modernc.org/sqlite`; open `data/career-ops.db`, run `SELECT * FROM applications ORDER BY num`, map rows to `model.CareerApplication`; remove all markdown regex vars (`reReportLink`, `reScoreValue`, etc.); also update `ParsePipeline()` if it exists or add it using `pipeline_entries` table
+- [ ] T034 [US3] Migrate Go dashboard `dashboard/internal/data/career.go` — replace `ParseApplications()` (markdown regex) with a SQLite query via `modernc.org/sqlite`; open `db/career-ops.db`, run `SELECT * FROM applications ORDER BY num`, map rows to `model.CareerApplication`; remove all markdown regex vars (`reReportLink`, `reScoreValue`, etc.); also update `ParsePipeline()` if it exists or add it using `pipeline_entries` table
 - [ ] T035 [US3] Add npm script aliases to `package.json` — add `"db": "node db.mjs"`, `"migrate": "node migrate-to-db.mjs"`, `"db:export": "node db.mjs export"` to `scripts` section
 
 ---
@@ -131,9 +131,9 @@ description: "Task list for SQLite Storage for Pipeline and Applications"
 
 **Purpose**: Test coverage, documentation, final consistency pass.
 
-- [ ] T049 Extend `test-all.mjs` with DB integration tests — add section "8. SQLite DB checks": (a) `node db.mjs init` exits 0 and creates `data/career-ops.db`; (b) insert application → get by num → fields match; (c) insert duplicate company+role+cycle_id → returns DUPLICATE error; (d) insert with invalid status → returns INVALID_STATUS error; (e) list with `--status Evaluated` → only Evaluated rows returned; (f) `node db.mjs stats --json` → parseable JSON with `applications` key
-- [ ] T050 [P] Update `CLAUDE.md` "Main Files" table — add row for `data/career-ops.db` (SQLite database, source of truth for pipeline and applications), add row for `db.mjs` (CLI for agent/script DB access), update `data/applications.md` and `data/pipeline.md` rows to note "(read-only snapshot; regenerated by `db.mjs export`)"
-- [ ] T051 [P] Update `CLAUDE.md` "Stack and Conventions" section — add `better-sqlite3` (sync Node.js SQLite driver) and `modernc.org/sqlite` (Go SQLite driver) to the Active Technologies list; add `data/career-ops.db` as user-layer file
+- [ ] T049 Extend `test-all.mjs` with DB integration tests — add section "8. SQLite DB checks": (a) `node db.mjs init` exits 0 and creates `db/career-ops.db`; (b) insert application → get by num → fields match; (c) insert duplicate company+role+cycle_id → returns DUPLICATE error; (d) insert with invalid status → returns INVALID_STATUS error; (e) list with `--status Evaluated` → only Evaluated rows returned; (f) `node db.mjs stats --json` → parseable JSON with `applications` key
+- [ ] T050 [P] Update `CLAUDE.md` "Main Files" table — add row for `db/career-ops.db` (SQLite database, source of truth for pipeline and applications), add row for `db.mjs` (CLI for agent/script DB access), update `data/applications.md` and `data/pipeline.md` rows to note "(read-only snapshot; regenerated by `db.mjs export`)"
+- [ ] T051 [P] Update `CLAUDE.md` "Stack and Conventions" section — add `better-sqlite3` (sync Node.js SQLite driver) and `modernc.org/sqlite` (Go SQLite driver) to the Active Technologies list; add `db/career-ops.db` as user-layer file
 - [ ] T052 [P] Verify `update-system.mjs` — confirm the update logic does NOT delete or overwrite anything under `data/`; if it has an explicit file list, add `career-ops.db` to the exclusion list; no change needed if it uses `data/*` glob already
 
 ---

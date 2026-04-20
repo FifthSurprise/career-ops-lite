@@ -11,12 +11,12 @@ Claude Conductor (claude --chrome --dangerously-skip-permissions)
   │  Reads DOM directly — user sees everything in real time
   │
   ├─ Offer 1: reads JD from DOM + URL
-  │    └─► claude -p worker → report .md + PDF + tracker-line
+  │    └─► claude -p worker → report .md + PDF + db.mjs insert
   │
   ├─ Offer 2: click next, reads JD + URL
-  │    └─► claude -p worker → report .md + PDF + tracker-line
+  │    └─► claude -p worker → report .md + PDF + db.mjs insert
   │
-  └─ End: merge tracker-additions → applications.md + summary
+  └─ End: print summary
 ```
 
 Each worker is a `claude -p` child with clean 200K token context. The conductor only orchestrates.
@@ -30,7 +30,6 @@ batch/
   batch-runner.sh               # Standalone orchestrator script
   batch-prompt.md               # Prompt template for workers
   logs/                         # One log per offer (gitignored)
-  tracker-additions/            # Tracker lines (gitignored)
 ```
 
 ## Mode A: Conductor --chrome
@@ -52,7 +51,7 @@ batch/
    f. Log to `logs/{report_num}-{id}.log`
    g. Chrome: go back → next offer
 5. **Pagination**: If no more offers → click "Next" → repeat
-6. **End**: Merge `tracker-additions/` → `applications.md` + summary
+6. **End**: Print summary
 
 ## Mode B: Standalone script
 
@@ -89,7 +88,7 @@ Each worker receives `batch-prompt.md` as system prompt. It is self-contained.
 The worker produces:
 1. Report `.md` in `reports/`
 2. PDF in `output/`
-3. Tracker line in `batch/tracker-additions/{id}.tsv`
+3. Tracker application created via `node db.mjs insert application --quiet`
 4. Result JSON via stdout
 
 ## Error handling

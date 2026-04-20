@@ -141,16 +141,16 @@ Levels are additive — all are run, results are merged and deduplicated.
 
    **Do not interrupt the entire scan if a URL fails.** If `browser_navigate` errors (timeout, 403, etc.), mark as `skipped_expired` and continue with the next.
 
-8. **For each verified new offer that passes filters**:
-   a. Insert into DB pipeline:
+8. **Bulk insert all verified new offers that pass filters**:
+   a. Instead of iterating, insert all discoveries at once into the DB pipeline to save context overhead:
       ```bash
-      node db.mjs insert pipeline --url {url} --source {portal} --company {company} --title {title}
+      node db.mjs insert pipeline --data '[{"url":"...","source":"...","company":"...","title":"..."}, ...]' --quiet
       ```
-   b. Record in `data/scan-history.tsv`: `{url}\t{date}\t{query_name}\t{title}\t{company}\tadded`
+   b. Record in scan history via `node db.mjs content set` or similar method if available, or assume it's logged via standard dedup mechanism if implemented. (Typically `scan.mjs` natively writes to `scan_history`).
 
-9. **Offers filtered by title**: record in `scan-history.tsv` with status `skipped_title`
-10. **Duplicate offers**: record with status `skipped_dup`
-11. **Expired offers (Level 3)**: record with status `skipped_expired`
+9. **Offers filtered by title**: typically logged to stdout in `scan.mjs`.
+10. **Duplicate offers**: typically logged to stdout.
+11. **Expired offers (Level 3)**: skip.
 
 ## Title and company extraction from WebSearch results
 
@@ -167,7 +167,7 @@ Generic regex: `(.+?)(?:\s*[@|—–-]\s*|\s+at\s+)(.+?)$`
 
 If a non-publicly accessible URL is found:
 1. Save the JD in `jds/{company}-{role-slug}.md`
-2. Add to pipeline.md as: `- [ ] local:jds/{company}-{role-slug}.md | {company} | {title}`
+2. Add to the database using `node db.mjs insert pipeline --url "local:jds/{company}-{role-slug}.md" --company {company} --title {title}`
 
 ## Scan History
 
@@ -191,7 +191,7 @@ Offers found: N total
 Filtered by title: N relevant
 Duplicates: N (already evaluated or in pipeline)
 Expired discarded: N (dead links, Level 3)
-New added to pipeline.md: N
+New added to db pipeline: N
 
   + {company} | {title} | {query_name}
   ...
